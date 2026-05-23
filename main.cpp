@@ -5,7 +5,7 @@
 #include <iostream>
 #include <iomanip>
 
-// Añadir SFML para audio
+// Audio SFML
 #include <SFML/Audio.hpp>
 
 #include "Skybox.h"
