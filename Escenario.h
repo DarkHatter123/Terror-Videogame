@@ -7,13 +7,18 @@
 #include <ctime>
 #include "Shader.h"
 #include "Lampara.h"
+#include "Puerta.h"
 
 struct ObjetoFisico {
     glm::vec3 posicion;
     glm::vec3 escala;
     glm::vec3 color;
     bool tieneColision;
-    bool esPuerta;  // Identificar si es la puerta que se abre
+    bool esPuerta;
+    bool tieneTextura = false;      // NUEVO
+    unsigned int texturaID = 0;     // NUEVO
+    float rotacionY = 0.0f;
+    bool rotarConPuerta = false;
 };
 
 struct LuzPuntual {
@@ -23,10 +28,10 @@ struct LuzPuntual {
     bool parpadea;
     float tiempoParpadeo;
     float offsetParpadeo;
-    // Nuevos campos para foco
     glm::vec3 direction;
     float cutOff;
     float outerCutOff;
+    bool visible; // Nota: manda a llamar si la bombilla se dibuja o no
 };
 
 class Escenario {
@@ -45,10 +50,14 @@ private:
         bool on;
     } flashlightData;
 
+    unsigned int texturaPuertaIndustrial;
+
     std::vector<ObjetoFisico> objetos;
     std::vector<LuzPuntual> luces;
     std::vector<Lampara> lamparas;
-
+    std::vector<int> objetosPuertaIndustrial;
+    std::vector<Puerta> puertasMadera;
+    float anguloPuerta;
     // Puerta animable
     int indicePuertaNormal;  // Índice de la puerta en el vector objetos
     bool puertaAbierta;
@@ -80,11 +89,14 @@ public:
 
     void togglePuerta();
     bool jugadorCercaDePuerta(glm::vec3 posJugador) const;
-    bool isPuertaAbierta() const { return puertaAbierta; }
+    bool isPuertaAbierta() const;
+    bool jugadorCercaPuerta(glm::vec3 posicionJugador);
 
     const std::vector<ObjetoFisico>& getObjetosFisicos() const { return objetos; }
     bool verificarColisionObjetos(glm::vec3 posicionJugador, float radioJugador) const;
 
     void setFlashlight(const glm::vec3& pos, const glm::vec3& dir, bool on);
     void configurarLinterna(Shader& shader);
+    void renderPuertasMadera(const glm::mat4& view, const glm::mat4& projection, Shader* shader);
+    void togglePuertaMadera(glm::vec3 jugadorPos);
 };
