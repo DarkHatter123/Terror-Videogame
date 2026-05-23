@@ -1,9 +1,35 @@
 #include "Escenario.h"
+#include <SOIL2/SOIL2.h>
 #include <iostream>
 
 float ancho = 20.0f;
 float alto = 10.0f;
 float profundo = 30.0f;
+
+unsigned int cargarTexturaPuerta(const char* path) {
+    unsigned int textureID = SOIL_load_OGL_texture(
+        path,
+        SOIL_LOAD_RGB,
+        SOIL_CREATE_NEW_ID,
+        SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y
+    );
+
+    if (textureID == 0) {
+        std::cout << "Error al cargar textura con SOIL2: " << path << std::endl;
+        std::cout << "Razón: " << SOIL_last_result() << std::endl;
+    } else {
+        std::cout << "Textura cargada correctamente: " << path << std::endl;
+
+        // Configurar parámetros de textura
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+
+    return textureID;
+}
 
 Escenario::Escenario() {
     srand(static_cast<unsigned int>(time(nullptr)));
@@ -13,8 +39,16 @@ Escenario::Escenario() {
     flashlightData.position = glm::vec3(0.0f);
     flashlightData.direction = glm::vec3(0.0f, 0.0f, -1.0f);
     puertaAbierta = false;
-    aperturaPuerta = 0.0f;
+    anguloPuerta = 0.0f;
     indicePuertaNormal = -1;
+
+    // Puerta de salida (cerca del cartel EXIT)
+    Puerta puertaSalida(glm::vec3(-7.5f, -2.5f, 29.8f));
+    puertaSalida.setTamanio(2.2f, 5.0f, 0.1f);
+    puertasMadera.push_back(puertaSalida);
+    texturaPuertaIndustrial = cargarTexturaPuerta("Textures/Puerta(2).png");
+
+
     setupHabitacion();
     setupCuboUnitario();
     setupEsfera();
@@ -22,8 +56,10 @@ Escenario::Escenario() {
     crearPuertas();
     crearEstanteriasYCajas();
     crearPasilloRecto();
-    crearNuevaArea(); // Llamada a la nueva área
+    crearNuevaArea();
 }
+
+
 
 Escenario::~Escenario() {
     glDeleteVertexArrays(1, &VAO);
@@ -95,56 +131,84 @@ void Escenario::setupEsfera() {
 }
 
 void Escenario::setupCuboUnitario() {
+
     float vertices[] = {
-        -0.5f, -0.5f,  0.5f,   0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,   0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,   0.0f,  0.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,   0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f, -0.5f,   0.0f,  0.0f, -1.0f,
-         0.5f, -0.5f, -0.5f,   0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,   0.0f,  0.0f, -1.0f,
-        -0.5f,  0.5f, -0.5f,   0.0f,  0.0f, -1.0f,
-        -0.5f, -0.5f, -0.5f,  -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f,  -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f,  -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f,  -1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,   1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,   1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,   1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,   1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f,   0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,   0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,   0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f,   0.0f, -1.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f,   0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,   0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,   0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f,   0.0f,  1.0f,  0.0f
+
+        // POSICION              // NORMAL           // UV
+
+        // Frente
+        -0.5f,-0.5f, 0.5f,      0,0,1,             0,0,
+         0.5f,-0.5f, 0.5f,      0,0,1,             1,0,
+         0.5f, 0.5f, 0.5f,      0,0,1,             1,1,
+        -0.5f, 0.5f, 0.5f,      0,0,1,             0,1,
+
+        // Atrás
+        -0.5f,-0.5f,-0.5f,      0,0,-1,            1,0,
+         0.5f,-0.5f,-0.5f,      0,0,-1,            0,0,
+         0.5f, 0.5f,-0.5f,      0,0,-1,            0,1,
+        -0.5f, 0.5f,-0.5f,      0,0,-1,            1,1,
+
+        // Izquierda
+        -0.5f,-0.5f,-0.5f,     -1,0,0,             0,0,
+        -0.5f,-0.5f, 0.5f,     -1,0,0,             1,0,
+        -0.5f, 0.5f, 0.5f,     -1,0,0,             1,1,
+        -0.5f, 0.5f,-0.5f,     -1,0,0,             0,1,
+
+        // Derecha
+         0.5f,-0.5f,-0.5f,      1,0,0,             1,0,
+         0.5f,-0.5f, 0.5f,      1,0,0,             0,0,
+         0.5f, 0.5f, 0.5f,      1,0,0,             0,1,
+         0.5f, 0.5f,-0.5f,      1,0,0,             1,1,
+
+        // Abajo
+        -0.5f,-0.5f,-0.5f,      0,-1,0,            0,1,
+         0.5f,-0.5f,-0.5f,      0,-1,0,            1,1,
+         0.5f,-0.5f, 0.5f,      0,-1,0,            1,0,
+        -0.5f,-0.5f, 0.5f,      0,-1,0,            0,0,
+
+        // Arriba
+        -0.5f,0.5f,-0.5f,       0,1,0,             0,0,
+         0.5f,0.5f,-0.5f,       0,1,0,             1,0,
+         0.5f,0.5f, 0.5f,       0,1,0,             1,1,
+        -0.5f,0.5f, 0.5f,       0,1,0,             0,1
     };
 
     unsigned int indices[] = {
-        0,1,2, 2,3,0, 4,5,6, 6,7,4, 8,9,10, 10,11,8,
-        12,13,14, 14,15,12, 16,17,18, 18,19,16, 20,21,22, 22,23,20
+        0,1,2, 2,3,0,
+        4,5,6, 6,7,4,
+        8,9,10, 10,11,8,
+        12,13,14, 14,15,12,
+        16,17,18, 18,19,16,
+        20,21,22, 22,23,20
     };
 
     glGenVertexArrays(1, &cuboVAO);
     glGenBuffers(1, &cuboVBO);
+
     unsigned int EBO;
     glGenBuffers(1, &EBO);
 
     glBindVertexArray(cuboVAO);
+
     glBindBuffer(GL_ARRAY_BUFFER, cuboVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    // posición
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+
+    // normales
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
+    // UV
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
     glBindVertexArray(0);
-    glDeleteBuffers(1, &EBO);
 }
 
 void Escenario::setupHabitacion() {
@@ -207,7 +271,17 @@ void Escenario::setupHabitacion() {
     glEnableVertexAttribArray(2);
 
     glBindVertexArray(0);
-    glDeleteBuffers(1, &EBO);
+}
+
+void Escenario::togglePuertaMadera(glm::vec3 jugadorPos)
+{
+    for (auto& puerta : puertasMadera)
+    {
+        if (puerta.jugadorCerca(jugadorPos))
+        {
+            puerta.toggle();
+        }
+    }
 }
 
 void Escenario::crearLuces() {
@@ -236,6 +310,7 @@ void Escenario::crearLuces() {
         luz.outerCutOff = glm::cos(glm::radians(45.0f));
         luz.tiempoParpadeo = 0.0f;
         luz.offsetParpadeo = (float)(rand() % 100) / 50.0f;
+        luz.visible = false;  // ← CAMBIADO: las bombillas NO se dibujan
         luces.push_back(luz);
         lamparas.push_back(Lampara(glm::vec3(lx, ly + 0.05f, lz)));
         float yCasquillo = ly + 0.1f;
@@ -312,7 +387,9 @@ void Escenario::crearPuertas() {
                 ventana.escala = glm::vec3(1.5f, altoPanel * 0.6f, 0.02f);
                 ventana.color = glm::vec3(0.6f, 0.7f, 0.8f);
                 ventana.tieneColision = true; ventana.esPuerta = false;
+                ventana.rotarConPuerta = true;
                 objetos.push_back(ventana);
+                objetosPuertaIndustrial.push_back(objetos.size() - 1);
 
                 ObjetoFisico marcoV;
                 marcoV.posicion = glm::vec3(v * 1.8f, yPanel, zParedTrasera + 0.07f);
@@ -533,8 +610,11 @@ void Escenario::crearPasilloRecto() {
     pFinalSup.tieneColision = true;
     pFinalSup.esPuerta = false;
     objetos.push_back(pFinalSup);
+    // En crearPasilloRecto(), agrega esta línea después de pFinalSup:
 
-    crearPuertaEnPosicion(glm::vec3(xFinal, sueloY, zFinal - 0.04f), false, false);
+    // ==========================================
+    // LUCES DEL PASILLO (con accesorios)
+    // ==========================================
     float alturaLucesP = 4.2f;
     float separacionLuces = 4.5f;
 
@@ -545,6 +625,9 @@ void Escenario::crearPasilloRecto() {
         }
     }
 
+    // ==========================================
+    // CARTEL EXIT (SOLO RECTÁNGULO VERDE)
+    // ==========================================
     ObjetoFisico cartelExit;
     cartelExit.posicion = glm::vec3(xFinal, sueloY + pAlto + 0.8f, zFinal - 0.06f);
     cartelExit.escala = glm::vec3(0.8f, 0.4f, 0.05f);
@@ -562,12 +645,14 @@ void Escenario::crearPasilloRecto() {
     luzExit.cutOff = glm::cos(glm::radians(60.0f));
     luzExit.outerCutOff = glm::cos(glm::radians(75.0f));
     luzExit.offsetParpadeo = (float)(rand() % 100) / 50.0f;
+    luzExit.visible = false;  // ← NUEVO: no dibujar bombilla
     luces.push_back(luzExit);
 }
 
 void Escenario::crearLuzPasillo(glm::vec3 pos) {
     float alturaTecho = alto / 2.0f;
 
+    // Luz puntual
     LuzPuntual luz;
     luz.posicion = pos - glm::vec3(0.0f, 0.15f, 0.0f);
     luz.intensidad = 1.0f;
@@ -578,8 +663,11 @@ void Escenario::crearLuzPasillo(glm::vec3 pos) {
     luz.outerCutOff = glm::cos(glm::radians(45.0f));
     luz.offsetParpadeo = (float)(rand() % 100) / 50.0f;
     luces.push_back(luz);
+
+    // LÁMPARA/CONO (accesorio visible)
     lamparas.push_back(Lampara(pos + glm::vec3(0.0f, 0.05f, 0.0f)));
 
+    // Cable
     float yCasquillo = pos.y + 0.05f;
     ObjetoFisico cable;
     cable.posicion = glm::vec3(pos.x, (alturaTecho + yCasquillo) / 2.0f, pos.z);
@@ -588,6 +676,7 @@ void Escenario::crearLuzPasillo(glm::vec3 pos) {
     cable.tieneColision = false; cable.esPuerta = false;
     objetos.push_back(cable);
 
+    // Casquillo
     ObjetoFisico casquillo;
     casquillo.posicion = glm::vec3(pos.x, pos.y + 0.05f, pos.z);
     casquillo.escala = glm::vec3(0.12f, 0.08f, 0.12f);
@@ -595,7 +684,6 @@ void Escenario::crearLuzPasillo(glm::vec3 pos) {
     casquillo.tieneColision = false; casquillo.esPuerta = false;
     objetos.push_back(casquillo);
 }
-
 void Escenario::crearPuertaEnPosicion(glm::vec3 pos, bool rotada, bool conColision) {
     float pAncho = 2.2f; float pAlto = 5.0f;
     glm::vec3 colorM = glm::vec3(0.15f, 0.10f, 0.06f);
@@ -619,13 +707,7 @@ void Escenario::crearPuertaEnPosicion(glm::vec3 pos, bool rotada, bool conColisi
     m3.color = colorM; m3.tieneColision = conColision; m3.esPuerta = false;
     objetos.push_back(m3);
 
-    ObjetoFisico p;
-    p.posicion = pos + glm::vec3(0, pAlto/2, 0);
-    p.escala = rotada ? glm::vec3(0.06f, pAlto, pAncho) : glm::vec3(pAncho, pAlto, 0.06f);
-    p.color = glm::vec3(0.35f, 0.20f, 0.10f);
-    p.tieneColision = false;
-    p.esPuerta = false;
-    objetos.push_back(p);
+
 
     for(int py = -1; py <= 1; py += 2) {
         for(int lado = -1; lado <= 1; lado += 2) {
@@ -648,7 +730,6 @@ void Escenario::crearPuertaEnPosicion(glm::vec3 pos, bool rotada, bool conColisi
     }
 }
 
-// NUEVA FUNCIÓN AÑADIDA
 void Escenario::crearPuertaIndustrial(glm::vec3 pos, bool rotada, bool conColision) {
     float pAncho = 2.2f;
     float pAlto = 5.0f;
@@ -656,58 +737,55 @@ void Escenario::crearPuertaIndustrial(glm::vec3 pos, bool rotada, bool conColisi
 
     glm::vec3 colorMarco = glm::vec3(0.25f, 0.25f, 0.27f);
     glm::vec3 colorPuerta = glm::vec3(0.45f, 0.45f, 0.48f);
-    glm::vec3 colorVentana = glm::vec3(0.6f, 0.7f, 0.8f);
-    glm::vec3 colorBarra = glm::vec3(0.7f, 0.1f, 0.1f);
 
+    // Marcos (sin textura)
     ObjetoFisico m1;
     m1.posicion = pos + (rotada ? glm::vec3(0, pAlto/2, -pAncho/2 - grosorMarco/2) : glm::vec3(-pAncho/2 - grosorMarco/2, pAlto/2, 0));
     m1.escala = rotada ? glm::vec3(grosorMarco, pAlto, grosorMarco) : glm::vec3(grosorMarco, pAlto, grosorMarco);
-    m1.color = colorMarco; m1.tieneColision = conColision; m1.esPuerta = false;
+    m1.color = colorMarco;
+    m1.tieneColision = conColision;
+    m1.esPuerta = false;
+    m1.tieneTextura = false;  // Sin textura
     objetos.push_back(m1);
 
     ObjetoFisico m2;
     m2.posicion = pos + (rotada ? glm::vec3(0, pAlto/2, pAncho/2 + grosorMarco/2) : glm::vec3(pAncho/2 + grosorMarco/2, pAlto/2, 0));
     m2.escala = rotada ? glm::vec3(grosorMarco, pAlto, grosorMarco) : glm::vec3(grosorMarco, pAlto, grosorMarco);
-    m2.color = colorMarco; m2.tieneColision = conColision; m2.esPuerta = false;
+    m2.color = colorMarco;
+    m2.tieneColision = conColision;
+    m2.esPuerta = false;
+    m2.tieneTextura = false;
     objetos.push_back(m2);
 
     ObjetoFisico m3;
     m3.posicion = pos + (rotada ? glm::vec3(0, pAlto + grosorMarco/2, 0) : glm::vec3(0, pAlto + grosorMarco/2, 0));
     m3.escala = rotada ? glm::vec3(grosorMarco, grosorMarco, pAncho + grosorMarco*2) : glm::vec3(pAncho + grosorMarco*2, grosorMarco, grosorMarco);
-    m3.color = colorMarco; m3.tieneColision = conColision; m3.esPuerta = false;
+    m3.color = colorMarco;
+    m3.tieneColision = conColision;
+    m3.esPuerta = false;
+    m3.tieneTextura = false;
     objetos.push_back(m3);
 
+    // Puerta principal CON TEXTURA
     ObjetoFisico p;
     p.posicion = pos + glm::vec3(0, pAlto/2, 0);
     p.escala = rotada ? glm::vec3(0.06f, pAlto, pAncho) : glm::vec3(pAncho, pAlto, 0.06f);
     p.color = colorPuerta;
-    p.tieneColision = false;
-    p.esPuerta = false;
+    p.tieneColision = true;
+    p.esPuerta = true;
+    p.rotarConPuerta = true;
+    p.tieneTextura = true;           // NUEVO
+    p.texturaID = texturaPuertaIndustrial;  // NUEVO
     objetos.push_back(p);
+    objetosPuertaIndustrial.push_back(objetos.size() - 1);
+}
 
-    float vAncho = 0.6f;
-    float vAlto = 0.8f;
-    float vOffsetY = 1.0f;
-    for(int lado = -1; lado <= 1; lado += 2) {
-        ObjetoFisico ventana;
-        ventana.posicion = pos + (rotada ? glm::vec3(lado * 0.035f, pAlto/2 + vOffsetY, 0) : glm::vec3(0, pAlto/2 + vOffsetY, lado * 0.035f));
-        ventana.escala = rotada ? glm::vec3(0.01f, vAlto, vAncho) : glm::vec3(vAncho, vAlto, 0.01f);
-        ventana.color = colorVentana;
-        ventana.tieneColision = false; ventana.esPuerta = false;
-        objetos.push_back(ventana);
-    }
-
-    for(int lado = -1; lado <= 1; lado += 2) {
-        ObjetoFisico barra;
-        barra.posicion = pos + (rotada ? glm::vec3(lado * 0.04f, 2.2f, 0) : glm::vec3(0, 2.2f, lado * 0.04f));
-        barra.escala = rotada ? glm::vec3(0.03f, 0.1f, pAncho * 0.6f) : glm::vec3(pAncho * 0.6f, 0.1f, 0.03f);
-        barra.color = colorBarra;
-        barra.tieneColision = false; barra.esPuerta = false;
-        objetos.push_back(barra);
-    }
+bool Escenario::isPuertaAbierta() const {
+    return puertaAbierta;
 }
 
 bool Escenario::verificarColisionObjetos(glm::vec3 posicionJugador, float radioJugador) const {
+    // Colisión con objetos normales
     for(const auto& obj : objetos) {
         if(!obj.tieneColision) continue;
         glm::vec3 minObj = obj.posicion - obj.escala / 2.0f - glm::vec3(radioJugador);
@@ -716,8 +794,32 @@ bool Escenario::verificarColisionObjetos(glm::vec3 posicionJugador, float radioJ
            posicionJugador.y >= minObj.y && posicionJugador.y <= maxObj.y &&
            posicionJugador.z >= minObj.z && posicionJugador.z <= maxObj.z) {
             return true;
+           }
+    }
+
+    // Colisión con puertas de madera
+    for(const auto& puerta : puertasMadera) {
+        if(puerta.verificarColision(posicionJugador, radioJugador)) {
+            return true;
         }
     }
+
+    return false;
+}
+
+bool Escenario::jugadorCercaPuerta(glm::vec3 posicionJugador)
+{
+    for (auto& puerta : puertasMadera)
+    {
+        float distancia =
+            glm::distance(posicionJugador, puerta.getPosicion());
+
+        if (distancia < 2.0f)
+        {
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -758,6 +860,7 @@ void Escenario::render(const glm::mat4& view, const glm::mat4& projection, const
     shader->setVec3("viewPos", cameraPos);
     configurarLuces(*shader, tiempo);
     configurarLinterna(*shader);
+
     glm::vec3 coloresParedes[] = {
         glm::vec3(0.20f, 0.20f, 0.22f),
         glm::vec3(0.22f, 0.20f, 0.24f),
@@ -766,35 +869,65 @@ void Escenario::render(const glm::mat4& view, const glm::mat4& projection, const
         glm::vec3(0.18f, 0.18f, 0.20f)
     };
 
+    // Dibujar paredes (sin textura)
     glBindVertexArray(VAO);
     for(int i = 0; i < 5; i++) {
         shader->setMat4("model", glm::mat4(1.0f));
         shader->setVec3("objectColor", coloresParedes[i]);
+        shader->setBool("usarTextura", false);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(i * 6 * sizeof(unsigned int)));
     }
     glBindVertexArray(0);
 
+    // Dibujar objetos (con o sin textura)
     glBindVertexArray(cuboVAO);
     for(const auto& obj : objetos) {
         glm::mat4 modelObj = glm::mat4(1.0f);
         modelObj = glm::translate(modelObj, obj.posicion);
+
+        if(obj.rotarConPuerta) {
+            glm::vec3 pivote(-obj.escala.x / 2.0f, 0.0f, 0.0f);
+            modelObj = glm::translate(modelObj, pivote);
+            modelObj = glm::rotate(modelObj, glm::radians(obj.rotacionY), glm::vec3(0.0f, 1.0f, 0.0f));
+            modelObj = glm::translate(modelObj, -pivote);
+        }
+
         modelObj = glm::scale(modelObj, obj.escala);
         shader->setMat4("model", modelObj);
-        shader->setVec3("objectColor", obj.color);
+
+        // Verificar si el objeto tiene textura
+        if (obj.tieneTextura) {
+            shader->setBool("usarTextura", true);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, obj.texturaID);
+            shader->setInt("textura", 0);
+        } else {
+            shader->setBool("usarTextura", false);
+            shader->setVec3("objectColor", obj.color);
+        }
+
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     }
     glBindVertexArray(0);
 
-    shaderLuz->use();
-    shaderLuz->setMat4("view", view);
-    shaderLuz->setMat4("projection", projection);
+    // Lámparas
+    shader->use();
+    shader->setMat4("view", view);
+    shader->setMat4("projection", projection);
 
     for (auto& lampara : lamparas) {
         lampara.render(*shader);
     }
 
+    // Bombillas (usando shaderLuz)
+    shaderLuz->use();
+    shaderLuz->setMat4("view", view);
+    shaderLuz->setMat4("projection", projection);
+
     glBindVertexArray(esferaVAO);
     for(const auto& luz : luces) {
+        if (!luz.visible) continue;
+
         float intensidad = luz.intensidad;
         if(luz.parpadea) {
             float parpadeo = sin(tiempo * 7.0f + luz.offsetParpadeo) * 0.5f + 0.5f;
@@ -812,6 +945,21 @@ void Escenario::render(const glm::mat4& view, const glm::mat4& projection, const
     glBindVertexArray(0);
 
     glEnable(GL_CULL_FACE);
+
+    // Puertas de madera
+    for (auto& puerta : puertasMadera) {
+        puerta.render(shader->ID);
+    }
+}
+
+void Escenario::renderPuertasMadera(const glm::mat4& view, const glm::mat4& projection, Shader* shader) {
+    shader->use();
+    shader->setMat4("view", view);
+    shader->setMat4("projection", projection);
+
+    for (auto& puerta : puertasMadera) {
+        puerta.render(shader->ID);
+    }
 }
 
 void Escenario::setFlashlight(const glm::vec3& pos, const glm::vec3& dir, bool on) {
@@ -839,17 +987,34 @@ void Escenario::configurarLinterna(Shader& shader) {
 }
 
 void Escenario::update(float deltaTime) {
-    if (indicePuertaNormal == -1 || indicePuertaNormal >= objetos.size()) return;
-    float velocidadApertura = 2.0f;
+
+    float velocidad = 120.0f;
+
     if (puertaAbierta) {
-        aperturaPuerta += velocidadApertura * deltaTime;
-        if (aperturaPuerta > 1.0f) aperturaPuerta = 1.0f;
-    } else {
-        aperturaPuerta -= velocidadApertura * deltaTime;
-        if (aperturaPuerta < 0.0f) aperturaPuerta = 0.0f;
+
+        anguloPuerta += velocidad * deltaTime;
+
+        if (anguloPuerta > 90.0f)
+            anguloPuerta = 90.0f;
     }
-    float desplazamientoMaximo = -2.0f;
-    objetos[indicePuertaNormal].posicion.x = posicionOriginalPuerta.x + (aperturaPuerta * desplazamientoMaximo);
+    else {
+
+        anguloPuerta -= velocidad * deltaTime;
+
+        if (anguloPuerta < 0.0f)
+            anguloPuerta = 0.0f;
+    }
+
+    for (int idx : objetosPuertaIndustrial) {
+
+        objetos[idx].rotacionY = -anguloPuerta;
+
+        objetos[idx].tieneColision = (anguloPuerta < 70.0f);
+    }
+    for (auto& puerta : puertasMadera)
+    {
+        puerta.update(deltaTime);
+    }
 }
 
 void Escenario::togglePuerta() {
@@ -858,7 +1023,10 @@ void Escenario::togglePuerta() {
 
 bool Escenario::jugadorCercaDePuerta(glm::vec3 posJugador) const {
     if (indicePuertaNormal == -1) return false;
-    float distancia = glm::distance(posJugador, posicionOriginalPuerta);
+    glm::vec2 jugador2D(posJugador.x, posJugador.z);
+    glm::vec2 puerta2D(posicionOriginalPuerta.x, posicionOriginalPuerta.z);
+
+    float distancia = glm::distance(jugador2D, puerta2D);
     return (distancia < 3.0f);
 }
 
@@ -882,6 +1050,7 @@ void Escenario::crearLuzRectangular(glm::vec3 pos) {
     luz.tiempoParpadeo = 0.0f;
     luz.offsetParpadeo = 0.0f;
     luces.push_back(luz);
+
 }
 
 void Escenario::crearNuevaArea() {
@@ -936,7 +1105,10 @@ void Escenario::crearNuevaArea() {
     pIzqSup.color = colPared; pIzqSup.tieneColision = true; pIzqSup.esPuerta = false;
     objetos.push_back(pIzqSup);
 
-    crearPuertaEnPosicion(glm::vec3(xCentro + anchoSala/2.0f, sueloY, zCentro), true, false);
+    // Puerta 1: Pared derecha (mirando desde el pasillo)
+    puertasMadera.push_back(Puerta(glm::vec3(xCentro + anchoSala/2.0f + 0.1f, sueloY + 1.5f, zCentro), 2.2f, 7.0f, 0.1f, 90.0f));
+
+    //crearPuertaEnPosicion(glm::vec3(xCentro + anchoSala/2.0f, sueloY, zCentro), true, false);
 
     float anchoParedMitad = (anchoSala - pAncho) / 2.0f;
 
@@ -958,7 +1130,9 @@ void Escenario::crearNuevaArea() {
     pFrenteSup.color = colPared; pFrenteSup.tieneColision = true; pFrenteSup.esPuerta = false;
     objetos.push_back(pFrenteSup);
 
-    crearPuertaEnPosicion(glm::vec3(xCentro, sueloY, zInicio + largoSala - 0.04f), false, false);
+    // Puerta 2: Pared frontal (al fondo de la sala)
+    puertasMadera.push_back(Puerta(glm::vec3(xCentro, sueloY + 1.5f, zInicio + largoSala - 0.1f), 2.2f, 7.0f, 0.1f, 0.0f));
+    //crearPuertaEnPosicion(glm::vec3(xCentro, sueloY, zInicio + largoSala - 0.04f), false, false);
 
     float anchoPasillo = 3.0f;
     float anchoParedTraseraMitad = (anchoSala - anchoPasillo) / 2.0f;
