@@ -48,6 +48,14 @@ sf::SoundBuffer bufferPuerta;
 sf::Sound soundPuerta;
 bool sonidoCargado = false;
 
+// Variables para pasos (3 sonidos para mayor naturalidad)
+sf::SoundBuffer bufferPaso1;
+sf::SoundBuffer bufferPaso2;
+sf::SoundBuffer bufferPaso3;
+sf::Sound soundPaso;
+int pasoActual = 1;
+float intervaloPasos = 0.4f;
+
 bool verificarColisionParedes(glm::vec3 nuevaPos) {
     // --- ZONA 1: BODEGA PRINCIPAL ---
     // Límites: X[-10, 10], Z[-15, 15]
@@ -92,28 +100,37 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
 }
 
 // ========================================
+// REPRODUCIR SONIDO DE PASOS (alternando 1,2,3)
+// ========================================
+void reproducirPaso() {
+    if (pasoActual == 1) {
+        soundPaso.setBuffer(bufferPaso1);
+        pasoActual = 2;
+    } else if (pasoActual == 2) {
+        soundPaso.setBuffer(bufferPaso2);
+        pasoActual = 3;
+    } else {
+        soundPaso.setBuffer(bufferPaso3);
+        pasoActual = 1;
+    }
+    soundPaso.play();
+}
+
+// ========================================
 // EVENTO DE SALIDA
 // ========================================
-
 bool eventoSalidaActivado = false;
 bool puertaBloqueada = false;
 
 bool jugadorEnZonaSalida(glm::vec3 pos) {
-
     // Zona cerca de la puerta EXIT
-    // Ajusta estos números según tu mapa
-
-    if (pos.x > -9.0f && pos.x < -6.0f &&
-        pos.z > 28.0f && pos.z < 31.5f) {
-
+    if (pos.x > -9.0f && pos.x < -6.0f && pos.z > 28.0f && pos.z < 31.5f) {
         return true;
-        }
-
+    }
     return false;
 }
 
-
-void processInput(GLFWwindow* window, Escenario& escenario) {
+void processInput(GLFWwindow* window, Escenario& escenario, float deltaTime) {
     float cameraSpeed = 2.5f * deltaTime;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -167,6 +184,21 @@ void processInput(GLFWwindow* window, Escenario& escenario) {
             cameraPos = nuevaPos;
             cameraPos.y = ALTURA_JUGADOR;
         }
+    }
+
+    // ========================================
+    // CONTROL DE PASOS (alternando 1,2,3 mientras camina)
+    // ========================================
+    static float tiempoAcumulado = 0.0f;
+
+    if (mover) {
+        tiempoAcumulado += deltaTime;
+        if (tiempoAcumulado >= intervaloPasos) {
+            tiempoAcumulado = 0.0f;
+            reproducirPaso();
+        }
+    } else {
+        tiempoAcumulado = 0.0f;
     }
 }
 
@@ -245,38 +277,60 @@ int main() {
     // CARGAR Y REPRODUCIR MÚSICA
     // ========================================
     try {
-        // Cargar archivo de música (cambia la ruta según donde tengas tu música)
+        // Cargar archivo de música
         if (musicaFondo.openFromFile("sounds/Ambience/Ambient_sound.ogg")) {
-            musicaFondo.setLoop(true);      // Repetir en bucle
-            musicaFondo.setVolume(50.0f);   // Volumen 0-100 (50 = mitad)
-            musicaFondo.play();              // Comenzar reproducción
+            musicaFondo.setLoop(true);
+            musicaFondo.setVolume(50.0f);
+            musicaFondo.play();
             musicaReproduciendo = true;
             std::cout << "Música cargada y reproduciendo" << std::endl;
         } else {
             std::cout << "Error: No se pudo cargar el archivo de música" << std::endl;
         }
 
-        // ========================================
-        // CARGAR SONIDO DE PUERTA
-        // ========================================
+        // Cargar sonido de puerta
         if (bufferPuerta.loadFromFile("sounds/SFX/fahhh.wav")) {
             soundPuerta.setBuffer(bufferPuerta);
-            soundPuerta.setVolume(70.0f);  // Volumen 70%
+            soundPuerta.setVolume(70.0f);
             sonidoCargado = true;
             std::cout << "Sonido de puerta cargado correctamente" << std::endl;
         } else {
-            std::cout << "Error: No se pudo cargar el sonido de puerta (sounds/fahhh.wav)" << std::endl;
+            std::cout << "Error: No se pudo cargar el sonido de puerta (sounds/SFX/fahhh.wav)" << std::endl;
         }
+
+        // ========================================
+        // CARGAR 3 SONIDOS DE PASOS
+        // ========================================
+        if (bufferPaso1.loadFromFile("sounds/SFX/Pasos_1.wav")) {
+            std::cout << "Sonido de paso 1 cargado correctamente" << std::endl;
+        } else {
+            std::cout << "Error: No se pudo cargar sounds/SFX/Pasos_1.wav" << std::endl;
+        }
+
+        if (bufferPaso2.loadFromFile("sounds/SFX/Pasos_2.wav")) {
+            std::cout << "Sonido de paso 2 cargado correctamente" << std::endl;
+        } else {
+            std::cout << "Error: No se pudo cargar sounds/SFX/Pasos_2.wav" << std::endl;
+        }
+
+        if (bufferPaso3.loadFromFile("sounds/SFX/Pasos_3.wav")) {
+            std::cout << "Sonido de paso 3 cargado correctamente" << std::endl;
+        } else {
+            std::cout << "Error: No se pudo cargar sounds/SFX/Pasos_3.wav" << std::endl;
+        }
+
+        soundPaso.setVolume(40.0f);
 
     } catch (const std::exception& e) {
         std::cout << "Error al cargar audio: " << e.what() << std::endl;
     }
 
     std::cout << "\n=== BODEGA DEL TERROR ===" << std::endl;
-    std::cout << "WASD: Moverse" << std::endl;
+    std::cout << "WASD: Moverse (con sonido de pasos)" << std::endl;
     std::cout << "Ratón: Mirar alrededor" << std::endl;
     std::cout << "M: Pausar/Reanudar música" << std::endl;
     std::cout << "E: Abrir/Cerrar puerta (con sonido)" << std::endl;
+    std::cout << "F: Linterna" << std::endl;
     std::cout << "ESC: Salir" << std::endl;
     std::cout << "========================\n" << std::endl;
 
@@ -292,16 +346,14 @@ int main() {
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        processInput(window, escenario);
+        processInput(window, escenario, deltaTime);
 
         escenario.update(deltaTime);
 
         // ========================================
         // EVENTO DE SALIDA
         // ========================================
-
         if (!eventoSalidaActivado && jugadorEnZonaSalida(cameraPos)) {
-
             eventoSalidaActivado = true;
             puertaBloqueada = true;
 
@@ -314,26 +366,19 @@ int main() {
             std::cout << "La puerta se ha bloqueado..." << std::endl;
         }
 
-
-
         // ========================================
         // CONTROL DE PUERTA CON TECLA E
         // ========================================
-
         static bool ePresionada = false;
 
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-
             if (!ePresionada) {
                 escenario.togglePuertaMadera(cameraPos);
-
                 ePresionada = true;
 
                 // SOLO si NO está bloqueada
                 if (!puertaBloqueada) {
-
                     if (escenario.jugadorCercaDePuerta(cameraPos)) {
-
                         escenario.togglePuerta();
 
                         // Reproducir sonido de puerta
@@ -341,29 +386,21 @@ int main() {
                             soundPuerta.play();
                         }
 
-                        std::cout << "Puerta "
-                                  << (escenario.isPuertaAbierta() ? "abierta" : "cerrada")
-                                  << std::endl;
+                        std::cout << "Puerta " << (escenario.isPuertaAbierta() ? "abierta" : "cerrada") << std::endl;
                     }
-                }
-                else {
-
+                } else {
                     // Mensaje cuando intenta abrirla bloqueada
                     if (escenario.jugadorCercaDePuerta(cameraPos)) {
-
                         std::cout << "La puerta esta bloqueada..." << std::endl;
                     }
                 }
-
                 ePresionada = true;
             }
         }
 
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
-
             ePresionada = false;
         }
-
 
         // Control de linterna con tecla F
         static bool flashlightOn = true;
