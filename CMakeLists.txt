@@ -21,6 +21,8 @@ add_executable(Proyecto_Terror
         Lampara.h
 
         C:/Librerias/glad/src/glad.c
+        Puerta.h
+        Puerta.cpp
 )
 
 # ========================
