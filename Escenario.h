@@ -49,8 +49,10 @@ private:
         glm::vec3 direction;
         bool on;
     } flashlightData;
-
-    unsigned int texturaPuertaIndustrial;
+private:
+    unsigned int texturaPared;  // Para cargar la textura de la pared
+    unsigned int texturaMarcoPuerta; // Para cargar el marco de la puerta
+    unsigned int texturaPuertaIndustrial; // Para cargar la textura de la puerta
 
     std::vector<ObjetoFisico> objetos;
     std::vector<LuzPuntual> luces;
