@@ -4,6 +4,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <iomanip>
+
+// Añadir SFML para audio
+#include <SFML/Audio.hpp>
+
 #include "Skybox.h"
 #include "Escenario.h"
 #include "Lampara.h"
@@ -34,6 +38,15 @@ const float MITAD_ANCHO = HABITACION_ANCHO / 2.0f;
 const float MITAD_PROFUNDO = HABITACION_PROFUNDO / 2.0f;
 const float RADIO_JUGADOR = 0.4f;
 const float ALTURA_JUGADOR = -1.0f;
+
+// Variables globales para música
+sf::Music musicaFondo;
+bool musicaReproduciendo = false;
+
+// Variables para sonido de puerta
+sf::SoundBuffer bufferPuerta;
+sf::Sound soundPuerta;
+bool sonidoCargado = false;
 
 bool verificarColisionParedes(glm::vec3 nuevaPos) {
     // --- ZONA 1: BODEGA PRINCIPAL ---
@@ -78,11 +91,49 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
     return false; // Si está fuera de cualquier zona definida
 }
 
+// ========================================
+// EVENTO DE SALIDA
+// ========================================
+
+bool eventoSalidaActivado = false;
+bool puertaBloqueada = false;
+
+bool jugadorEnZonaSalida(glm::vec3 pos) {
+
+    // Zona cerca de la puerta EXIT
+    // Ajusta estos números según tu mapa
+
+    if (pos.x > -9.0f && pos.x < -6.0f &&
+        pos.z > 28.0f && pos.z < 31.5f) {
+
+        return true;
+        }
+
+    return false;
+}
+
+
 void processInput(GLFWwindow* window, Escenario& escenario) {
     float cameraSpeed = 2.5f * deltaTime;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    // Control de música con tecla M
+    static bool lastMState = false;
+    bool currentMState = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
+    if (currentMState && !lastMState) {
+        if (musicaReproduciendo) {
+            musicaFondo.pause();
+            musicaReproduciendo = false;
+            std::cout << "Música pausada" << std::endl;
+        } else {
+            musicaFondo.play();
+            musicaReproduciendo = true;
+            std::cout << "Música reanudada" << std::endl;
+        }
+    }
+    lastMState = currentMState;
 
     glm::vec3 nuevaPos = cameraPos;
     bool mover = false;
@@ -168,6 +219,12 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Bodega del Terror", NULL, NULL);
+    if (!window) {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+
     glfwMakeContextCurrent(window);
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -184,9 +241,42 @@ int main() {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
+    // ========================================
+    // CARGAR Y REPRODUCIR MÚSICA
+    // ========================================
+    try {
+        // Cargar archivo de música (cambia la ruta según donde tengas tu música)
+        if (musicaFondo.openFromFile("sounds/Ambience/Ambient_sound.ogg")) {
+            musicaFondo.setLoop(true);      // Repetir en bucle
+            musicaFondo.setVolume(50.0f);   // Volumen 0-100 (50 = mitad)
+            musicaFondo.play();              // Comenzar reproducción
+            musicaReproduciendo = true;
+            std::cout << "Música cargada y reproduciendo" << std::endl;
+        } else {
+            std::cout << "Error: No se pudo cargar el archivo de música" << std::endl;
+        }
+
+        // ========================================
+        // CARGAR SONIDO DE PUERTA
+        // ========================================
+        if (bufferPuerta.loadFromFile("sounds/SFX/fahhh.wav")) {
+            soundPuerta.setBuffer(bufferPuerta);
+            soundPuerta.setVolume(70.0f);  // Volumen 70%
+            sonidoCargado = true;
+            std::cout << "Sonido de puerta cargado correctamente" << std::endl;
+        } else {
+            std::cout << "Error: No se pudo cargar el sonido de puerta (sounds/fahhh.wav)" << std::endl;
+        }
+
+    } catch (const std::exception& e) {
+        std::cout << "Error al cargar audio: " << e.what() << std::endl;
+    }
+
     std::cout << "\n=== BODEGA DEL TERROR ===" << std::endl;
     std::cout << "WASD: Moverse" << std::endl;
     std::cout << "Ratón: Mirar alrededor" << std::endl;
+    std::cout << "M: Pausar/Reanudar música" << std::endl;
+    std::cout << "E: Abrir/Cerrar puerta (con sonido)" << std::endl;
     std::cout << "ESC: Salir" << std::endl;
     std::cout << "========================\n" << std::endl;
 
@@ -197,14 +287,83 @@ int main() {
     yaw = -90.0f;
     pitch = 0.0f;
 
-
-
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
         processInput(window, escenario);
+
+        escenario.update(deltaTime);
+
+        // ========================================
+        // EVENTO DE SALIDA
+        // ========================================
+
+        if (!eventoSalidaActivado && jugadorEnZonaSalida(cameraPos)) {
+
+            eventoSalidaActivado = true;
+            puertaBloqueada = true;
+
+            // Cerrar puerta automáticamente
+            if (escenario.isPuertaAbierta()) {
+                escenario.togglePuerta();
+            }
+
+            std::cout << "\n=== EVENTO ACTIVADO ===" << std::endl;
+            std::cout << "La puerta se ha bloqueado..." << std::endl;
+        }
+
+
+
+        // ========================================
+        // CONTROL DE PUERTA CON TECLA E
+        // ========================================
+
+        static bool ePresionada = false;
+
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+
+            if (!ePresionada) {
+                escenario.togglePuertaMadera(cameraPos);
+
+                ePresionada = true;
+
+                // SOLO si NO está bloqueada
+                if (!puertaBloqueada) {
+
+                    if (escenario.jugadorCercaDePuerta(cameraPos)) {
+
+                        escenario.togglePuerta();
+
+                        // Reproducir sonido de puerta
+                        if (sonidoCargado) {
+                            soundPuerta.play();
+                        }
+
+                        std::cout << "Puerta "
+                                  << (escenario.isPuertaAbierta() ? "abierta" : "cerrada")
+                                  << std::endl;
+                    }
+                }
+                else {
+
+                    // Mensaje cuando intenta abrirla bloqueada
+                    if (escenario.jugadorCercaDePuerta(cameraPos)) {
+
+                        std::cout << "La puerta esta bloqueada..." << std::endl;
+                    }
+                }
+
+                ePresionada = true;
+            }
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
+
+            ePresionada = false;
+        }
+
 
         // Control de linterna con tecla F
         static bool flashlightOn = true;
@@ -232,6 +391,9 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // Limpiar recursos de música
+    musicaFondo.stop();
 
     glfwTerminate();
     return 0;
