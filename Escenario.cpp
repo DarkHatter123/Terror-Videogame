@@ -6,7 +6,7 @@ float ancho = 20.0f;
 float alto = 10.0f;
 float profundo = 30.0f;
 
-unsigned int cargarTexturaPuerta(const char* path) {
+unsigned int cargarTextura(const char* path) {
     unsigned int textureID = SOIL_load_OGL_texture(
         path,
         SOIL_LOAD_RGB,
@@ -46,7 +46,9 @@ Escenario::Escenario() {
     Puerta puertaSalida(glm::vec3(-7.5f, -2.5f, 29.8f));
     puertaSalida.setTamanio(2.2f, 5.0f, 0.1f);
     puertasMadera.push_back(puertaSalida);
-    texturaPuertaIndustrial = cargarTexturaPuerta("Textures/Puerta(2).png");
+    texturaPuertaIndustrial = cargarTextura("Textures/Puerta(2).png");
+    texturaPared = cargarTextura("Textures/Pared.png");
+    texturaMarcoPuerta = cargarTextura("Textures/Marco_puerta.png");
 
 
     setupHabitacion();
@@ -403,24 +405,38 @@ void Escenario::crearPuertas() {
     glm::vec3 colorParedF = glm::vec3(0.25f, 0.25f, 0.28f);
     float zParedFrontal = profundo/2;
 
+    // Pared frontal izquierda CON TEXTURA
     ObjetoFisico pFIzq;
     pFIzq.posicion = glm::vec3(-9.3f, 0.0f, zParedFrontal);
     pFIzq.escala = glm::vec3(1.4f, alto, 0.2f);
-    pFIzq.color = colorParedF; pFIzq.tieneColision = true; pFIzq.esPuerta = false;
+    pFIzq.color = colorParedF;
+    pFIzq.tieneColision = true;
+    pFIzq.esPuerta = false;
+    pFIzq.tieneTextura = true;        // ← NUEVO
+    pFIzq.texturaID = texturaPared;   // ← NUEVO
     objetos.push_back(pFIzq);
 
+    // Pared frontal derecha CON TEXTURA
     ObjetoFisico pFDer;
     pFDer.posicion = glm::vec3(1.8f, 0.0f, zParedFrontal);
     pFDer.escala = glm::vec3(16.4f, alto, 0.2f);
-    pFDer.color = colorParedF; pFDer.tieneColision = true; pFDer.esPuerta = false;
+    pFDer.color = colorParedF;
+    pFDer.tieneColision = true;
+    pFDer.esPuerta = false;
+    pFDer.tieneTextura = true;        // ← NUEVO
+    pFDer.texturaID = texturaPared;   // ← NUEVO
     objetos.push_back(pFDer);
 
+    // Pared frontal superior (encima de la puerta) CON TEXTURA
     ObjetoFisico pFSup;
     pFSup.posicion = glm::vec3(-7.5f, 2.5f, zParedFrontal);
     pFSup.escala = glm::vec3(2.2f, 5.0f, 0.2f);
-    pFSup.color = colorParedF; pFSup.tieneColision = true; pFSup.esPuerta = false;
+    pFSup.color = colorParedF;
+    pFSup.tieneColision = true;
+    pFSup.esPuerta = false;
+    pFSup.tieneTextura = true;        // ← NUEVO
+    pFSup.texturaID = texturaMarcoPuerta;   // ← NUEVO
     objetos.push_back(pFSup);
-
     float xPuertaNormal = -7.5f;
     posicionOriginalPuerta = glm::vec3(xPuertaNormal, sueloY, zParedFrontal - 0.04f);
 
@@ -861,21 +877,71 @@ void Escenario::render(const glm::mat4& view, const glm::mat4& projection, const
     configurarLuces(*shader, tiempo);
     configurarLinterna(*shader);
 
+    // Colores para suelo y techo
     glm::vec3 coloresParedes[] = {
-        glm::vec3(0.20f, 0.20f, 0.22f),
-        glm::vec3(0.22f, 0.20f, 0.24f),
-        glm::vec3(0.22f, 0.20f, 0.24f),
-        glm::vec3(0.30f, 0.28f, 0.26f),
-        glm::vec3(0.18f, 0.18f, 0.20f)
+        glm::vec3(0.20f, 0.20f, 0.22f),  // [0] Pared TRASERA (con textura)
+        glm::vec3(0.22f, 0.20f, 0.24f),  // [1] Pared IZQUIERDA (con textura)
+        glm::vec3(0.22f, 0.20f, 0.24f),  // [2] Pared DERECHA (con textura)
+        glm::vec3(0.30f, 0.28f, 0.26f),  // [3] SUELO (color sólido)
+        glm::vec3(0.18f, 0.18f, 0.20f)   // [4] TECHO (color sólido)
     };
 
-    // Dibujar paredes (sin textura)
     glBindVertexArray(VAO);
-    for(int i = 0; i < 5; i++) {
+
+    // ==========================================
+    // PAREDES CON TEXTURA (índices 0, 1, 2)
+    // ==========================================
+    shader->setBool("usarTextura", true);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texturaPared);
+    shader->setInt("textura", 0);
+
+    for(int i = 0; i < 3; i++) {
         shader->setMat4("model", glm::mat4(1.0f));
-        shader->setVec3("objectColor", coloresParedes[i]);
-        shader->setBool("usarTextura", false);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(i * 6 * sizeof(unsigned int)));
+    }
+
+    // ==========================================
+    // SUELO Y TECHO SIN TEXTURA (índices 3 y 4)
+    // ==========================================
+    for(int i = 3; i < 5; i++) {
+        shader->setBool("usarTextura", false);
+        shader->setVec3("objectColor", coloresParedes[i]);
+        shader->setMat4("model", glm::mat4(1.0f));
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(i * 6 * sizeof(unsigned int)));
+    }
+
+    glBindVertexArray(0);
+
+    // ==========================================
+    // RESTO DE OBJETOS
+    // ==========================================
+    glBindVertexArray(cuboVAO);
+    for(const auto& obj : objetos) {
+        glm::mat4 modelObj = glm::mat4(1.0f);
+        modelObj = glm::translate(modelObj, obj.posicion);
+
+        if(obj.rotarConPuerta) {
+            glm::vec3 pivote(-obj.escala.x / 2.0f, 0.0f, 0.0f);
+            modelObj = glm::translate(modelObj, pivote);
+            modelObj = glm::rotate(modelObj, glm::radians(obj.rotacionY), glm::vec3(0.0f, 1.0f, 0.0f));
+            modelObj = glm::translate(modelObj, -pivote);
+        }
+
+        modelObj = glm::scale(modelObj, obj.escala);
+        shader->setMat4("model", modelObj);
+
+        if (obj.tieneTextura) {
+            shader->setBool("usarTextura", true);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, obj.texturaID);
+            shader->setInt("textura", 0);
+        } else {
+            shader->setBool("usarTextura", false);
+            shader->setVec3("objectColor", obj.color);
+        }
+
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     }
     glBindVertexArray(0);
 
