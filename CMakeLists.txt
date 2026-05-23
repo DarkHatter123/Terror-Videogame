@@ -13,7 +13,6 @@ add_executable(Proyecto_Terror
         Escenario.cpp
         Mesh.cpp
         Model.cpp
-        stb_image.cpp
         Lampara.cpp
 
         Mesh.h
@@ -21,7 +20,6 @@ add_executable(Proyecto_Terror
         Lampara.h
 
         C:/Librerias/glad/src/glad.c
-        Puerta.h
         Puerta.cpp
 )
 
@@ -35,9 +33,9 @@ include_directories("C:/Librerias/assimp/include")
 target_include_directories(Proyecto_Terror PRIVATE
         C:/Librerias/glfw/include
         C:/Librerias/glad/include
-        C:/Librerias/stb/include
         C:/Librerias/glm
         C:/Librerias/SFML/include
+        C:/Librerias/SOIL2/src
 )
 
 # ========================
@@ -55,6 +53,7 @@ target_link_libraries(Proyecto_Terror PRIVATE
         C:/Librerias/glfw/lib-mingw-w64/libglfw3.a
 
         # OpenGL
+        C:/Librerias/SOIL2/build/libSOIL2.a
         opengl32
         gdi32
         user32
@@ -69,6 +68,7 @@ target_link_libraries(Proyecto_Terror PRIVATE
         # Opcional (si luego usas ventanas o gráficos de SFML)
         # C:/Librerias/SFML/lib/libsfml-window.a
         # C:/Librerias/SFML/lib/libsfml-graphics.a
+
 )
 
 # ========================
