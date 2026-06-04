@@ -48,6 +48,11 @@ sf::SoundBuffer bufferPuerta;
 sf::Sound soundPuerta;
 bool sonidoCargado = false;
 
+// Variables para sonido de palanca
+sf::SoundBuffer bufferPalanca;
+sf::Sound soundPalanca;
+bool sonidoPalancaCargado = false;
+
 // Variables para pasos (3 sonidos para mayor naturalidad)
 sf::SoundBuffer bufferPaso1;
 sf::SoundBuffer bufferPaso2;
@@ -57,46 +62,127 @@ int pasoActual = 1;
 float intervaloPasos = 0.4f;
 
 bool verificarColisionParedes(glm::vec3 nuevaPos) {
-    // --- ZONA 1: BODEGA PRINCIPAL ---
-    // Límites: X[-10, 10], Z[-15, 15]
-    if (nuevaPos.z >= -15.0f && nuevaPos.z <= 15.0f) {
-        if (nuevaPos.x < -9.5f || nuevaPos.x > 9.5f) return false; // Paredes laterales
-        if (nuevaPos.z < -14.5f) return false;                    // Pared trasera
+    // --- ZONA NUEVA: ÁREA CON DIVISIÓN (Z de 56.0 a 74.0) ---
+    if (nuevaPos.z > 56.0f && nuevaPos.z <= 74.0f && nuevaPos.x > 9.0f) {
+        float xMin = 9.5f + RADIO_JUGADOR;
+        float xMax = 27.5f - RADIO_JUGADOR;
+        float zFin = 74.0f - RADIO_JUGADOR;
 
-        // Pared frontal (Z=15): Solo permite pasar por la puerta del pasillo
-        if (nuevaPos.z > 14.5f) {
-            if (nuevaPos.x < -8.8f || nuevaPos.x > -6.2f) return false;
+        if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
+
+        bool enPuertaFrente = (nuevaPos.z >= zFin && nuevaPos.x > 17.4f && nuevaPos.x < 19.6f);
+        if (nuevaPos.z > zFin && !enPuertaFrente) return false;
+
+        if (nuevaPos.z > 58.0f + RADIO_JUGADOR) {
+            float paredDivX = 15.5f;
+            float margenPared = 0.05f + RADIO_JUGADOR;
+            if (nuevaPos.x > paredDivX - margenPared && nuevaPos.x < paredDivX + margenPared) {
+                return false;
+            }
         }
         return true;
     }
 
-    // --- ZONA 2: PASILLO RECTO ---
-    // Límites: X[-9, -6], Z[15, 30]
-    if (nuevaPos.z > 15.0f && nuevaPos.z <= 30.0f) {
-        // Paredes laterales del pasillo
-        if (nuevaPos.x < -8.8f || nuevaPos.x > -6.2f) return false;
+    // --- ZONA 9: PASILLO FRONTAL ---
+    if (nuevaPos.x > 27.5f) {
+        float xMax = 37.5f - RADIO_JUGADOR;
+        float zMin = 35.5f + RADIO_JUGADOR;
+        float zMax = 38.5f - RADIO_JUGADOR;
 
-        // Al final del pasillo (Z=30), solo permite pasar por la puerta central
-        if (nuevaPos.z > 29.5f) {
-            if (nuevaPos.x < -8.5f || nuevaPos.x > -6.5f) return false;
-        }
+        if (nuevaPos.x > xMax) return false;
+        if (nuevaPos.z < zMin) return false;
+        if (nuevaPos.z > zMax) return false;
+
         return true;
     }
 
-    // --- ZONA 3: NUEVA ÁREA (SALA FINAL) ---
-    // Límites: Centrada en X=-7.5, Ancho 14 -> X entre [-14.5, -0.5]
-    // Z de 30 a 44
+    // --- ZONA 8: PASILLO TRASERO ---
+    if (nuevaPos.z > 46.0f && nuevaPos.x > 9.5f && nuevaPos.z <= 56.0f) {
+        float zMax = 56.0f - RADIO_JUGADOR;
+        float xMin = 17.0f + RADIO_JUGADOR;
+        float xMax = 20.0f - RADIO_JUGADOR;
+
+        if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
+
+        bool enPuertaFondo = (nuevaPos.z >= zMax && nuevaPos.x > 17.4f && nuevaPos.x < 19.6f);
+        if (nuevaPos.z > zMax && !enPuertaFondo) return false;
+
+        return true;
+    }
+
+    // --- ZONA 7: ÁREA FINAL 2 ---
+    if (nuevaPos.x > 9.5f && nuevaPos.z >= 28.0f && nuevaPos.z <= 46.0f) {
+        float xMin = 9.5f + RADIO_JUGADOR;
+        float xMax = 27.5f - RADIO_JUGADOR;
+        float zMin = 28.0f + RADIO_JUGADOR;
+        float zMax = 46.0f - RADIO_JUGADOR;
+
+        bool enPuertaIzquierda = (nuevaPos.x <= xMin && nuevaPos.z > 35.5f && nuevaPos.z < 38.5f);
+        bool enPuertaFrente = (nuevaPos.x >= xMax && nuevaPos.z > 35.5f && nuevaPos.z < 38.5f);
+        bool enPuertaDer = (nuevaPos.z <= zMin && nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
+        bool enPuertaAtras = (nuevaPos.z >= zMax && nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
+
+        if (nuevaPos.x > xMax && !enPuertaFrente) return false;
+        if (nuevaPos.x < xMin && !enPuertaIzquierda) return false;
+        if (nuevaPos.z > zMax && !enPuertaAtras) return false;
+        if (nuevaPos.z < zMin && !enPuertaDer) return false;
+        return true;
+    }
+
+    // --- ZONA 6: ÁREA FINAL 1 ---
+    if (nuevaPos.z > 54.0f && nuevaPos.x <= 9.5f) {
+        float xMin = -14.5f + RADIO_JUGADOR;
+        float xMax = -0.5f - RADIO_JUGADOR;
+        float zMin = 54.0f + RADIO_JUGADOR;
+        float zMax = 68.0f - RADIO_JUGADOR;
+
+        bool enPuertaAtras = (nuevaPos.z <= zMin && nuevaPos.x > -9.0f && nuevaPos.x < -6.0f);
+
+        if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
+        if (nuevaPos.z > zMax) return false;
+        if (nuevaPos.z < zMin && !enPuertaAtras) return false;
+        return true;
+    }
+
+    // --- ZONA 4: PASILLO EXTENSIÓN 1 ---
+    if (nuevaPos.z > 44.0f && nuevaPos.z <= 54.0f && nuevaPos.x <= 9.5f) {
+        if (nuevaPos.x < -9.0f + RADIO_JUGADOR || nuevaPos.x > -6.0f - RADIO_JUGADOR) return false;
+        return true;
+    }
+
+    // --- ZONA 3 Y 5: NUEVA ÁREA Y PASILLO DERECHO ---
     if (nuevaPos.z > 30.0f && nuevaPos.z <= 44.0f) {
+        if (nuevaPos.x > -0.5f && nuevaPos.x <= 9.5f) {
+            if (nuevaPos.z < 35.5f + RADIO_JUGADOR || nuevaPos.z > 38.5f - RADIO_JUGADOR) return false;
+            return true;
+        }
+
         float xMinSala = -14.5f + RADIO_JUGADOR;
         float xMaxSala = -0.5f - RADIO_JUGADOR;
         float zMaxSala = 44.0f - RADIO_JUGADOR;
 
-        if (nuevaPos.x < xMinSala || nuevaPos.x > xMaxSala) return false; // Paredes laterales
-        if (nuevaPos.z > zMaxSala) return false;                         // Pared frontal
+        if (nuevaPos.x < xMinSala) return false;
+        if (nuevaPos.x > xMaxSala && (nuevaPos.z < 35.5f || nuevaPos.z > 38.5f)) return false;
+        if (nuevaPos.z > zMaxSala && (nuevaPos.x < -8.5f || nuevaPos.x > -6.5f)) return false;
         return true;
     }
 
-    return false; // Si está fuera de cualquier zona definida
+    // --- ZONA 2: PASILLO RECTO ---
+    if (nuevaPos.z > 15.0f && nuevaPos.z <= 30.0f) {
+        if (nuevaPos.x < -8.8f || nuevaPos.x > -6.2f) return false;
+        if (nuevaPos.z > 29.5f && (nuevaPos.x < -8.5f || nuevaPos.x > -6.5f)) return false;
+        return true;
+    }
+
+    // --- ZONA 1: BODEGA PRINCIPAL ---
+    if (nuevaPos.z >= -15.0f && nuevaPos.z <= 15.0f) {
+        if (nuevaPos.x < -9.5f || nuevaPos.x > 9.5f) return false;
+        if (nuevaPos.z < -14.5f) return false;
+        if (nuevaPos.z > 14.5f && (nuevaPos.x < -8.8f || nuevaPos.x > -6.2f)) return false;
+        return true;
+    }
+
+    return false;
 }
 
 // ========================================
@@ -123,7 +209,6 @@ bool eventoSalidaActivado = false;
 bool puertaBloqueada = false;
 
 bool jugadorEnZonaSalida(glm::vec3 pos) {
-    // Zona cerca de la puerta EXIT
     if (pos.x > -9.0f && pos.x < -6.0f && pos.z > 28.0f && pos.z < 31.5f) {
         return true;
     }
@@ -179,18 +264,14 @@ void processInput(GLFWwindow* window, Escenario& escenario, float deltaTime) {
     }
 
     if (mover) {
-        // Verificar colisiones con paredes Y con objetos
         if (verificarColisionParedes(nuevaPos) && !escenario.verificarColisionObjetos(nuevaPos, RADIO_JUGADOR)) {
             cameraPos = nuevaPos;
             cameraPos.y = ALTURA_JUGADOR;
         }
     }
 
-    // ========================================
-    // CONTROL DE PASOS (alternando 1,2,3 mientras camina)
-    // ========================================
+    // CONTROL DE PASOS
     static float tiempoAcumulado = 0.0f;
-
     if (mover) {
         tiempoAcumulado += deltaTime;
         if (tiempoAcumulado >= intervaloPasos) {
@@ -277,7 +358,6 @@ int main() {
     // CARGAR Y REPRODUCIR MÚSICA
     // ========================================
     try {
-        // Cargar archivo de música
         if (musicaFondo.openFromFile("sounds/Ambience/Ambient_sound.ogg")) {
             musicaFondo.setLoop(true);
             musicaFondo.setVolume(50.0f);
@@ -288,19 +368,25 @@ int main() {
             std::cout << "Error: No se pudo cargar el archivo de música" << std::endl;
         }
 
-        // Cargar sonido de puerta
-        if (bufferPuerta.loadFromFile("sounds/SFX/fahhh.wav")) {
+        /*if (bufferPuerta.loadFromFile("sounds/SFX/fahhh.wav")) {
             soundPuerta.setBuffer(bufferPuerta);
             soundPuerta.setVolume(70.0f);
             sonidoCargado = true;
             std::cout << "Sonido de puerta cargado correctamente" << std::endl;
         } else {
-            std::cout << "Error: No se pudo cargar el sonido de puerta (sounds/SFX/fahhh.wav)" << std::endl;
-        }
+            std::cout << "Error: No se pudo cargar el sonido de puerta" << std::endl;
+        }*/
 
-        // ========================================
-        // CARGAR 3 SONIDOS DE PASOS
-        // ========================================
+        // Cargar sonido de palanca
+        /*if (bufferPalanca.loadFromFile("sounds/SFX/lever.wav")) {
+            soundPalanca.setBuffer(bufferPalanca);
+            soundPalanca.setVolume(70.0f);
+            sonidoPalancaCargado = true;
+            std::cout << "Sonido de palanca cargado correctamente" << std::endl;
+        } else {
+            std::cout << "Error: No se pudo cargar el sonido de palanca" << std::endl;
+        }*/
+
         if (bufferPaso1.loadFromFile("sounds/SFX/Pasos_1.wav")) {
             std::cout << "Sonido de paso 1 cargado correctamente" << std::endl;
         } else {
@@ -329,7 +415,7 @@ int main() {
     std::cout << "WASD: Moverse (con sonido de pasos)" << std::endl;
     std::cout << "Ratón: Mirar alrededor" << std::endl;
     std::cout << "M: Pausar/Reanudar música" << std::endl;
-    std::cout << "E: Abrir/Cerrar puerta (con sonido)" << std::endl;
+    std::cout << "E: Abrir/Cerrar puerta / Activar palanca" << std::endl;
     std::cout << "F: Linterna" << std::endl;
     std::cout << "ESC: Salir" << std::endl;
     std::cout << "========================\n" << std::endl;
@@ -340,6 +426,7 @@ int main() {
     cameraPos = glm::vec3(0.0f, ALTURA_JUGADOR, 7.5f);
     yaw = -90.0f;
     pitch = 0.0f;
+
 
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
@@ -357,7 +444,6 @@ int main() {
             eventoSalidaActivado = true;
             puertaBloqueada = true;
 
-            // Cerrar puerta automáticamente
             if (escenario.isPuertaAbierta()) {
                 escenario.togglePuerta();
             }
@@ -376,12 +462,10 @@ int main() {
                 escenario.togglePuertaMadera(cameraPos);
                 ePresionada = true;
 
-                // SOLO si NO está bloqueada
                 if (!puertaBloqueada) {
                     if (escenario.jugadorCercaDePuerta(cameraPos)) {
                         escenario.togglePuerta();
 
-                        // Reproducir sonido de puerta
                         if (sonidoCargado) {
                             soundPuerta.play();
                         }
@@ -389,7 +473,6 @@ int main() {
                         std::cout << "Puerta " << (escenario.isPuertaAbierta() ? "abierta" : "cerrada") << std::endl;
                     }
                 } else {
-                    // Mensaje cuando intenta abrirla bloqueada
                     if (escenario.jugadorCercaDePuerta(cameraPos)) {
                         std::cout << "La puerta esta bloqueada..." << std::endl;
                     }
@@ -402,6 +485,34 @@ int main() {
             ePresionada = false;
         }
 
+        // ========================================
+        // CONTROL DE PALANCA CON TECLA E (cerca de la palanca)
+        // ========================================
+        static bool ePalancaPresionada = false;
+
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+            if (!ePalancaPresionada) {
+                if (escenario.jugadorCercaPalanca(cameraPos)) {
+                    escenario.togglePalanca();
+
+                    if (sonidoPalancaCargado) {
+                        soundPalanca.play();
+                    }
+
+                    if (escenario.isPalancaActivada()) {
+                        std::cout << "¡Palanca activada!" << std::endl;
+                        // Aquí puedes agregar la acción que quieras
+                    } else {
+                        std::cout << "Palanca desactivada" << std::endl;
+                    }
+                }
+                ePalancaPresionada = true;
+            }
+        }
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
+            ePalancaPresionada = false;
+        }
+
         // Control de linterna con tecla F
         static bool flashlightOn = true;
         static bool lastFState = false;
@@ -411,7 +522,6 @@ int main() {
         }
         lastFState = currentFState;
 
-        // Actualizar datos de la linterna con la posición y dirección de la cámara
         escenario.setFlashlight(cameraPos, cameraFront, flashlightOn);
 
         glClearColor(0.03f, 0.03f, 0.05f, 1.0f);
@@ -429,7 +539,6 @@ int main() {
         glfwPollEvents();
     }
 
-    // Limpiar recursos de música
     musicaFondo.stop();
 
     glfwTerminate();
