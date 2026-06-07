@@ -8,6 +8,9 @@
 #include "Shader.h"
 #include "Lampara.h"
 #include "Puerta.h"
+#include "Caja.h"
+
+class Model;
 
 struct ObjetoFisico {
     glm::vec3 posicion;
@@ -43,6 +46,12 @@ private:
     Shader* shader;
     Shader* shaderLuz;
 
+    // Para la animación de la palanca
+    float anguloPalanca;
+    bool palancaActivada;
+    bool palancaAnimando;
+    Model* modeloPalancaPtr;  // Puntero para acceder a la palanca
+
 private:
     struct FlashlightData {
         glm::vec3 position;
@@ -51,20 +60,35 @@ private:
     } flashlightData;
 private:
     unsigned int texturaPared;  // Para cargar la textura de la pared
+    unsigned int texturaPared2;
+    unsigned int texturaPared3; // Para Cargar la textura de oficina
     unsigned int texturaMarcoPuerta; // Para cargar el marco de la puerta
     unsigned int texturaPuertaIndustrial; // Para cargar la textura de la puerta
+    unsigned int texturaCaja1;  // ← Agregar
+    unsigned int texturaCaja2;  // ← Agregar
+    unsigned int texturaCaja3;  // ← Agregar
+    unsigned int texturaSuelo;
+    unsigned int texturaLampara;
+    unsigned int texturaSueloJefe;
+    unsigned int texturaSueloAlfombra;
 
     std::vector<ObjetoFisico> objetos;
+    std::vector<Model*> modelosExtra;
+    std::vector<glm::vec3> modelosPosiciones;
+    std::vector<glm::vec3> modelosEscalas;
+    std::vector<glm::vec3> modelosRotaciones;
     std::vector<LuzPuntual> luces;
     std::vector<Lampara> lamparas;
     std::vector<int> objetosPuertaIndustrial;
     std::vector<Puerta> puertasMadera;
+    std::vector<Caja> cajas;  // ← Vector de cajas 3D
     float anguloPuerta;
     // Puerta animable
     int indicePuertaNormal;  // Índice de la puerta en el vector objetos
     bool puertaAbierta;
     float aperturaPuerta;    // 0.0 = cerrada, 1.0 = abierta
     glm::vec3 posicionOriginalPuerta;
+
 
     void setupHabitacion();
     void setupCuboUnitario();
@@ -106,4 +130,8 @@ public:
     void configurarLinterna(Shader& shader);
     void renderPuertasMadera(const glm::mat4& view, const glm::mat4& projection, Shader* shader);
     void togglePuertaMadera(glm::vec3 jugadorPos);
+
+    bool jugadorCercaPalanca(glm::vec3 posJugador) const;
+    void togglePalanca();
+    bool isPalancaActivada() const { return palancaActivada; }
 };

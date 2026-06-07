@@ -43,7 +43,6 @@ link_directories(
 add_executable(Proyecto_Terror
         main.cpp
         Shader.cpp
-        Skybox.cpp
         Escenario.cpp
         ${GLAD_PATH}/src/glad.c
         Mesh.cpp
@@ -52,7 +51,6 @@ add_executable(Proyecto_Terror
         Model.h
         Lampara.cpp
         Lampara.h
-        Definiciones.h
         Puerta.cpp
         Puerta.h
 
@@ -61,6 +59,8 @@ add_executable(Proyecto_Terror
         src/SOIL2/image_helper.c
         src/SOIL2/wfETC.c
         src/SOIL2/image_array.c
+        Caja.cpp
+        Caja.h
 )
 
 # ========================
@@ -76,16 +76,3 @@ target_link_libraries(Proyecto_Terror
         sfml-audio  # <-- NUEVO
 )
 
-# ========================
-# COPIAR SHADERS
-# ========================
-add_custom_command(TARGET Proyecto_Terror POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Proyecto_Terror>/shaders"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/shaders/skybox.vert"
-        "${CMAKE_SOURCE_DIR}/shaders/skybox.frag"
-        "${CMAKE_SOURCE_DIR}/shaders/escenario.vert"
-        "${CMAKE_SOURCE_DIR}/shaders/escenario.frag"
-        "$<TARGET_FILE_DIR:Proyecto_Terror>/shaders/"
-        COMMENT "Copiando archivos shaders al directorio de build"
-)

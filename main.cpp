@@ -48,6 +48,11 @@ sf::SoundBuffer bufferPuerta;
 sf::Sound soundPuerta;
 bool sonidoCargado = false;
 
+// Variables para sonido de palanca
+sf::SoundBuffer bufferPalanca;
+sf::Sound soundPalanca;
+bool sonidoPalancaCargado = false;
+
 // Variables para pasos (3 sonidos para mayor naturalidad)
 sf::SoundBuffer bufferPaso1;
 sf::SoundBuffer bufferPaso2;
@@ -57,24 +62,28 @@ int pasoActual = 1;
 float intervaloPasos = 0.4f;
 
 bool verificarColisionParedes(glm::vec3 nuevaPos) {
-    // --- ZONA NUEVA: ÁREA ESTÁNDAR (Z de 56.0 a 74.0) ---
-    // Conectada al final del pasillo movido
-    if (nuevaPos.z > 56.0f && nuevaPos.z <= 74.0f) {
+    // --- ZONA NUEVA: ÁREA CON DIVISIÓN (Z de 56.0 a 74.0) ---
+    if (nuevaPos.z > 56.0f && nuevaPos.z <= 74.0f && nuevaPos.x > 9.0f) {
         float xMin = 9.5f + RADIO_JUGADOR;
         float xMax = 27.5f - RADIO_JUGADOR;
         float zFin = 74.0f - RADIO_JUGADOR;
 
-        // Límites principales de las paredes exteriores de la sala
         if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
 
-        // Pared frontal con la puerta (Z = 74.0)
         bool enPuertaFrente = (nuevaPos.z >= zFin && nuevaPos.x > 17.4f && nuevaPos.x < 19.6f);
         if (nuevaPos.z > zFin && !enPuertaFrente) return false;
 
+        if (nuevaPos.z > 58.0f + RADIO_JUGADOR) {
+            float paredDivX = 15.5f;
+            float margenPared = 0.05f + RADIO_JUGADOR;
+            if (nuevaPos.x > paredDivX - margenPared && nuevaPos.x < paredDivX + margenPared) {
+                return false;
+            }
+        }
         return true;
     }
 
-    // --- ZONA 9: PASILLO FRONTAL (Puerta a la IZQUIERDA - CERRADA) ---
+    // --- ZONA 9: PASILLO FRONTAL ---
     if (nuevaPos.x > 27.5f) {
         float xMax = 37.5f - RADIO_JUGADOR;
         float zMin = 35.5f + RADIO_JUGADOR;
@@ -87,7 +96,7 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
         return true;
     }
 
-    // --- ZONA 8: EL OTRO PASILLO (Movido atrás, puerta al final - SE PUEDE ABRIR) ---
+    // --- ZONA 8: PASILLO TRASERO ---
     if (nuevaPos.z > 46.0f && nuevaPos.x > 9.5f && nuevaPos.z <= 56.0f) {
         float zMax = 56.0f - RADIO_JUGADOR;
         float xMin = 17.0f + RADIO_JUGADOR;
@@ -95,7 +104,6 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
 
         if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
 
-        // La pared del fondo del pasillo tiene el hueco transitable hacia la nueva área
         bool enPuertaFondo = (nuevaPos.z >= zMax && nuevaPos.x > 17.4f && nuevaPos.x < 19.6f);
         if (nuevaPos.z > zMax && !enPuertaFondo) return false;
 
@@ -110,9 +118,9 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
         float zMax = 46.0f - RADIO_JUGADOR;
 
         bool enPuertaIzquierda = (nuevaPos.x <= xMin && nuevaPos.z > 35.5f && nuevaPos.z < 38.5f);
-        bool enPuertaFrente = (nuevaPos.x >= xMax && nuevaPos.z > 35.5f && nuevaPos.z < 38.5f); // Conecta al pasillo cerrado
+        bool enPuertaFrente = (nuevaPos.x >= xMax && nuevaPos.z > 35.5f && nuevaPos.z < 38.5f);
         bool enPuertaDer = (nuevaPos.z <= zMin && nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
-        bool enPuertaAtras = (nuevaPos.z >= zMax && nuevaPos.x > 17.0f && nuevaPos.x < 20.0f); // Conecta al pasillo abierto
+        bool enPuertaAtras = (nuevaPos.z >= zMax && nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
 
         if (nuevaPos.x > xMax && !enPuertaFrente) return false;
         if (nuevaPos.x < xMin && !enPuertaIzquierda) return false;
@@ -201,7 +209,6 @@ bool eventoSalidaActivado = false;
 bool puertaBloqueada = false;
 
 bool jugadorEnZonaSalida(glm::vec3 pos) {
-    // Zona cerca de la puerta EXIT
     if (pos.x > -9.0f && pos.x < -6.0f && pos.z > 28.0f && pos.z < 31.5f) {
         return true;
     }
@@ -257,18 +264,14 @@ void processInput(GLFWwindow* window, Escenario& escenario, float deltaTime) {
     }
 
     if (mover) {
-        // Verificar colisiones con paredes Y con objetos
         if (verificarColisionParedes(nuevaPos) && !escenario.verificarColisionObjetos(nuevaPos, RADIO_JUGADOR)) {
             cameraPos = nuevaPos;
             cameraPos.y = ALTURA_JUGADOR;
         }
     }
 
-    // ========================================
-    // CONTROL DE PASOS (alternando 1,2,3 mientras camina)
-    // ========================================
+    // CONTROL DE PASOS
     static float tiempoAcumulado = 0.0f;
-
     if (mover) {
         tiempoAcumulado += deltaTime;
         if (tiempoAcumulado >= intervaloPasos) {
@@ -355,7 +358,6 @@ int main() {
     // CARGAR Y REPRODUCIR MÚSICA
     // ========================================
     try {
-        // Cargar archivo de música
         if (musicaFondo.openFromFile("sounds/Ambience/Ambient_sound.ogg")) {
             musicaFondo.setLoop(true);
             musicaFondo.setVolume(50.0f);
@@ -366,19 +368,25 @@ int main() {
             std::cout << "Error: No se pudo cargar el archivo de música" << std::endl;
         }
 
-        // Cargar sonido de puerta
-        if (bufferPuerta.loadFromFile("sounds/SFX/fahhh.wav")) {
+        /*if (bufferPuerta.loadFromFile("sounds/SFX/fahhh.wav")) {
             soundPuerta.setBuffer(bufferPuerta);
             soundPuerta.setVolume(70.0f);
             sonidoCargado = true;
             std::cout << "Sonido de puerta cargado correctamente" << std::endl;
         } else {
-            std::cout << "Error: No se pudo cargar el sonido de puerta (sounds/SFX/fahhh.wav)" << std::endl;
-        }
+            std::cout << "Error: No se pudo cargar el sonido de puerta" << std::endl;
+        }*/
 
-        // ========================================
-        // CARGAR 3 SONIDOS DE PASOS
-        // ========================================
+        // Cargar sonido de palanca
+        /*if (bufferPalanca.loadFromFile("sounds/SFX/lever.wav")) {
+            soundPalanca.setBuffer(bufferPalanca);
+            soundPalanca.setVolume(70.0f);
+            sonidoPalancaCargado = true;
+            std::cout << "Sonido de palanca cargado correctamente" << std::endl;
+        } else {
+            std::cout << "Error: No se pudo cargar el sonido de palanca" << std::endl;
+        }*/
+
         if (bufferPaso1.loadFromFile("sounds/SFX/Pasos_1.wav")) {
             std::cout << "Sonido de paso 1 cargado correctamente" << std::endl;
         } else {
@@ -407,17 +415,28 @@ int main() {
     std::cout << "WASD: Moverse (con sonido de pasos)" << std::endl;
     std::cout << "Ratón: Mirar alrededor" << std::endl;
     std::cout << "M: Pausar/Reanudar música" << std::endl;
-    std::cout << "E: Abrir/Cerrar puerta (con sonido)" << std::endl;
+    std::cout << "E: Abrir/Cerrar puerta / Activar palanca" << std::endl;
     std::cout << "F: Linterna" << std::endl;
+    std::cout << "F11: Pantalla Completa" << std::endl;
     std::cout << "ESC: Salir" << std::endl;
     std::cout << "========================\n" << std::endl;
 
-    Skybox skybox(50.0f);
+
+    std::vector<std::string> faces;
+    faces.push_back("Textures/px.jpg");
+    faces.push_back("Textures/nx.jpg");
+    faces.push_back("Textures/py.jpg");
+    faces.push_back("Textures/ny.jpg");
+    faces.push_back("Textures/nz.jpg");
+    faces.push_back("Textures/pz.jpg");
+
+    Skybox mySkybox(faces);
     Escenario escenario;
 
     cameraPos = glm::vec3(0.0f, ALTURA_JUGADOR, 7.5f);
     yaw = -90.0f;
     pitch = 0.0f;
+
 
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
@@ -435,7 +454,6 @@ int main() {
             eventoSalidaActivado = true;
             puertaBloqueada = true;
 
-            // Cerrar puerta automáticamente
             if (escenario.isPuertaAbierta()) {
                 escenario.togglePuerta();
             }
@@ -454,12 +472,10 @@ int main() {
                 escenario.togglePuertaMadera(cameraPos);
                 ePresionada = true;
 
-                // SOLO si NO está bloqueada
                 if (!puertaBloqueada) {
                     if (escenario.jugadorCercaDePuerta(cameraPos)) {
                         escenario.togglePuerta();
 
-                        // Reproducir sonido de puerta
                         if (sonidoCargado) {
                             soundPuerta.play();
                         }
@@ -467,7 +483,6 @@ int main() {
                         std::cout << "Puerta " << (escenario.isPuertaAbierta() ? "abierta" : "cerrada") << std::endl;
                     }
                 } else {
-                    // Mensaje cuando intenta abrirla bloqueada
                     if (escenario.jugadorCercaDePuerta(cameraPos)) {
                         std::cout << "La puerta esta bloqueada..." << std::endl;
                     }
@@ -480,7 +495,36 @@ int main() {
             ePresionada = false;
         }
 
-        // Control de linterna con tecla F
+        // ========================================
+        // CONTROL DE PALANCA CON TECLA E (cerca de la palanca)
+        // ========================================
+        static bool ePalancaPresionada = false;
+
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+            if (!ePalancaPresionada) {
+                if (escenario.jugadorCercaPalanca(cameraPos)) {
+                    escenario.togglePalanca();
+
+                    if (sonidoPalancaCargado) {
+                        soundPalanca.play();
+                    }
+
+                    if (escenario.isPalancaActivada()) {
+                        std::cout << "¡Palanca activada!" << std::endl;
+                    } else {
+                        std::cout << "Palanca desactivada" << std::endl;
+                    }
+                }
+                ePalancaPresionada = true;
+            }
+        }
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
+            ePalancaPresionada = false;
+        }
+
+        // ========================================
+        // CONTROL DE LINTERNA CON TECLA F
+        // ========================================
         static bool flashlightOn = true;
         static bool lastFState = false;
         bool currentFState = glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS;
@@ -489,7 +533,36 @@ int main() {
         }
         lastFState = currentFState;
 
-        // Actualizar datos de la linterna con la posición y dirección de la cámara
+        // ========================================
+        // CONTROL DE PANTALLA COMPLETA CON F11
+        // ========================================
+        static bool lastF11State = false;
+        bool currentF11State = glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS;
+
+        if (currentF11State && !lastF11State) {
+            static bool isFullscreen = false;
+            static int windowedX, windowedY, windowedWidth, windowedHeight;
+
+            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+            if (!isFullscreen) {
+                // Guardar la posición y tamaño actuales de la ventana
+                glfwGetWindowPos(window, &windowedX, &windowedY);
+                glfwGetWindowSize(window, &windowedWidth, &windowedHeight);
+
+                // Cambiar a pantalla completa
+                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+                std::cout << "Pantalla completa activada" << std::endl;
+            } else {
+                // Restaurar a modo ventana usando los datos guardados
+                glfwSetWindowMonitor(window, nullptr, windowedX, windowedY, windowedWidth, windowedHeight, 0);
+                std::cout << "Modo ventana activado" << std::endl;
+            }
+            isFullscreen = !isFullscreen;
+        }
+        lastF11State = currentF11State;
+
         escenario.setFlashlight(cameraPos, cameraFront, flashlightOn);
 
         glClearColor(0.03f, 0.03f, 0.05f, 1.0f);
@@ -500,14 +573,13 @@ int main() {
                                                 (float)SCR_WIDTH / (float)SCR_HEIGHT,
                                                 0.1f, 100.0f);
 
-        skybox.render(view, projection);
+        mySkybox.render(view, projection);
         escenario.render(view, projection, cameraPos, (float)glfwGetTime());
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    // Limpiar recursos de música
     musicaFondo.stop();
 
     glfwTerminate();
