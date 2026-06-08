@@ -10,8 +10,16 @@ set(GLFW_PATH "C:/glfw")
 set(GLM_PATH "C:/glm")
 set(GLAD_PATH "C:/glad")
 set(ASSIMP_ROOT "C:/assimp")
-set(ASSIMP_BUILD "C:/assimp/cmake-build-debug")
+set(ASSIMP_BUILD "C:/assimp-master/build")
 set(SFML_PATH "C:/SFML")
+
+# Dear ImGui
+set(IMGUI_ROOT "C:/imgui-master/imgui-master")
+
+# ========================
+# DEFINICIONES
+# ========================
+add_definitions(-DIMGUI_DEFINE_MATH_OPERATORS)
 
 # ========================
 # INCLUDES
@@ -21,11 +29,12 @@ include_directories(
         ${GLM_PATH}
         ${GLAD_PATH}/include
         ${ASSIMP_ROOT}/include
-        ${ASSIMP_BUILD}/include # <-- config.h
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src/SOIL2
-        ${SFML_PATH}/include
+        ${SFML_PATH}
 
+        ${IMGUI_ROOT}
+        ${IMGUI_ROOT}/backends
 )
 
 # ========================
@@ -34,7 +43,25 @@ include_directories(
 link_directories(
         ${GLFW_PATH}/lib-mingw-w64
         ${ASSIMP_BUILD}/lib
-        ${SFML_PATH}/lib  # <-- NUEVO (ajústalo si tu carpeta es diferente)
+        ${SFML_PATH}/lib
+)
+
+# ========================
+# FUENTES IMGUI
+# ========================
+set(IMGUI_SOURCES
+        ${IMGUI_ROOT}/imgui.cpp
+        ${IMGUI_ROOT}/imgui_draw.cpp
+        ${IMGUI_ROOT}/imgui_tables.cpp
+        ${IMGUI_ROOT}/imgui_widgets.cpp
+        ${IMGUI_ROOT}/imgui_demo.cpp
+
+        ${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp
+        ${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp
+        Menu.cpp
+        VAO.cpp
+        VBO.cpp
+        EBO.cpp
 )
 
 # ========================
@@ -43,49 +70,50 @@ link_directories(
 add_executable(Proyecto_Terror
         main.cpp
         Shader.cpp
-        Skybox.cpp
         Escenario.cpp
+
         ${GLAD_PATH}/src/glad.c
+
         Mesh.cpp
         Mesh.h
         Model.cpp
         Model.h
         Lampara.cpp
         Lampara.h
-        Definiciones.h
         Puerta.cpp
         Puerta.h
+        Caja.cpp
+        Caja.h
+
+        TexturaUtils.cpp
 
         src/SOIL2/SOIL2.c
         src/SOIL2/image_DXT.c
         src/SOIL2/image_helper.c
         src/SOIL2/wfETC.c
         src/SOIL2/image_array.c
+
+        ${IMGUI_SOURCES}
+)
+
+# ========================
+# DEFINICIONES IMGUI
+# ========================
+target_compile_definitions(Proyecto_Terror PRIVATE
+        IMGUI_IMPL_OPENGL_LOADER_GLAD
 )
 
 # ========================
 # LINKEO
 # ========================
 target_link_libraries(Proyecto_Terror
+        C:/Libraries/lib/Libs/libglfw3.a
         opengl32
-        glfw3
-        ${ASSIMP_BUILD}/lib/libassimpd.dll.a
-        sfml-graphics
-        sfml-window
-        sfml-system
-        sfml-audio  # <-- NUEVO
-)
-
-# ========================
-# COPIAR SHADERS
-# ========================
-add_custom_command(TARGET Proyecto_Terror POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Proyecto_Terror>/shaders"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/shaders/skybox.vert"
-        "${CMAKE_SOURCE_DIR}/shaders/skybox.frag"
-        "${CMAKE_SOURCE_DIR}/shaders/escenario.vert"
-        "${CMAKE_SOURCE_DIR}/shaders/escenario.frag"
-        "$<TARGET_FILE_DIR:Proyecto_Terror>/shaders/"
-        COMMENT "Copiando archivos shaders al directorio de build"
+        gdi32
+        user32
+        "C:/libraries/include/assimp-master/build/lib/libassimp.dll.a"
+        "C:/Libraries/lib/Libs/libsfml-graphics.a"
+        "C:/Libraries/lib/Libs/libsfml-window.a"
+        "C:/Libraries/lib/Libs/libsfml-system.a"
+        "C:/Libraries/lib/Libs/libsfml-audio.a"
 )

@@ -18,7 +18,12 @@ public:
     glm::vec3 scale;
     
     Model(const char* path);
+    Model(const Model& other);  // ← Constructor de copia
+    Model& operator=(const Model& other);  // ← Operador de asignación
+    ~Model();  // ← Destructor
+
     void Draw(Shader &shader);
+    void setManualTexture(const char* texturePath);
     
 private:
     std::vector<Mesh> meshes;
