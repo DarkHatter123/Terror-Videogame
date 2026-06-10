@@ -67,19 +67,20 @@ Escenario::Escenario() {
     palancaAnimando = false;
     modeloPalancaPtr = nullptr;
 
-    setupHabitacion();
-    setupCuboUnitario();
-    setupEsfera();
-    crearLuces();
-    crearPuertas();
-    crearEstanteriasYCajas();
-    crearPasilloRecto();
-    crearNuevaArea();
-    crearPasillosExtensionNuevaArea();
-    crearAreaFinal1();
-    crearAreaFinal2();
-    crearPasillosDesdeAreaFinal2();
-    NuevaAreaF();
+    Bodega();
+    Cajas();
+    Bombillo();
+    Luces();
+    Puertas();
+    Estanterias();
+    PasilloBodega();
+    AreaCajas();
+    PasillosAreaCajas();
+    SalaJefe();
+    AreaSeguridad();
+    PasillosAreaSeguridad();
+    Recepcion();
+    PasilloRecepcion();
 }
 
 Escenario::~Escenario() {
@@ -94,7 +95,7 @@ Escenario::~Escenario() {
     delete shaderLuz;
 }
 
-void Escenario::setupEsfera() {
+void Escenario::Bombillo() {
     std::vector<float> vertices;
     std::vector<unsigned int> indices;
     float radio = 0.5f;
@@ -151,7 +152,7 @@ void Escenario::setupEsfera() {
     glBindVertexArray(0);
 }
 
-void Escenario::setupCuboUnitario() {
+void Escenario::Cajas() {
     float vertices[] = {
         -0.5f,-0.5f, 0.5f,      0,0,1,             0,0,
          0.5f,-0.5f, 0.5f,      0,0,1,             1,0,
@@ -219,7 +220,7 @@ void Escenario::setupCuboUnitario() {
     glBindVertexArray(0);
 }
 
-void Escenario::setupHabitacion() {
+void Escenario::Bodega() {
     float vertices[] = {
         -ancho/2, -alto/2, -profundo/2,   0.0f,  0.0f,  1.0f,   0.0f, 0.0f,
          ancho/2, -alto/2, -profundo/2,   0.0f,  0.0f,  1.0f,   1.0f, 0.0f,
@@ -289,7 +290,7 @@ void Escenario::togglePuertaMadera(glm::vec3 jugadorPos) {
     }
 }
 
-void Escenario::crearLuces() {
+void Escenario::Luces() {
     float posicionesLuz[][3] = {
         {-4.0f, 4.0f, -10.0f},
         {4.0f, 4.0f, -10.0f},
@@ -344,7 +345,7 @@ void Escenario::crearLuces() {
     }
 }
 
-void Escenario::crearPuertas() {
+void Escenario::Puertas() {
     float sueloY = -alto/2;
     float puertaGarajeAncho = 6.0f;
     float puertaGarajeAlto = 7.0f;
@@ -454,12 +455,12 @@ void Escenario::crearPuertas() {
 
     indicePuertaNormal = objetos.size() + 3;
 
-    crearPuertaIndustrial(posicionOriginalPuerta, false, true);
+    PuertaIndustrial(posicionOriginalPuerta, false, true);
 
     objetos[indicePuertaNormal].esPuerta = true;
 }
 
-void Escenario::crearEstanteriasYCajas() {
+void Escenario::Estanterias() {
     float alturaEstante = 8.0f;
     float anchoEstante = 3.0f;
     float profundoEstante = 0.8f;
@@ -609,7 +610,7 @@ void Escenario::crearEstanteriasYCajas() {
 
 }
 
-void Escenario::crearPasilloRecto() {
+void Escenario::PasilloBodega() {
     float sueloY = -alto / 2.0f;
     float techoY = alto / 2.0f;
     float xPuerta = -7.5f;
@@ -696,7 +697,7 @@ void Escenario::crearPasilloRecto() {
     for(int i = 0; i < 4; i++) {
         float zLuz = zInicio + 2.5f + i * separacionLuces;
         if(zLuz < zFinal - 1.0f) {
-            crearLuzPasillo(glm::vec3(xPuerta, alturaLucesP, zLuz));
+            LucesPasillo(glm::vec3(xPuerta, alturaLucesP, zLuz));
         }
     }
 
@@ -721,7 +722,7 @@ void Escenario::crearPasilloRecto() {
     luces.push_back(luzExit);
 }
 
-void Escenario::crearLuzPasillo(glm::vec3 pos) {
+void Escenario::LucesPasillo(glm::vec3 pos) {
     float alturaTecho = alto / 2.0f;
 
     LuzPuntual luz;
@@ -753,7 +754,7 @@ void Escenario::crearLuzPasillo(glm::vec3 pos) {
     objetos.push_back(casquillo);
 }
 
-void Escenario::crearPuertaEnPosicion(glm::vec3 pos, bool rotada, bool conColision) {
+void Escenario::PuertasMadera(glm::vec3 pos, bool rotada, bool conColision) {
     float pAncho = 2.2f; float pAlto = 5.0f;
     glm::vec3 colorM = glm::vec3(0.15f, 0.10f, 0.06f);
     float grosorMarco = 0.12f;
@@ -797,7 +798,7 @@ void Escenario::crearPuertaEnPosicion(glm::vec3 pos, bool rotada, bool conColisi
     }
 }
 
-void Escenario::crearPuertaIndustrial(glm::vec3 pos, bool rotada, bool conColision) {
+void Escenario::PuertaIndustrial(glm::vec3 pos, bool rotada, bool conColision) {
     float pAncho = 2.2f;
     float pAlto = 5.0f;
     float grosorMarco = 0.12f;
@@ -1122,7 +1123,7 @@ bool Escenario::jugadorCercaDePuerta(glm::vec3 posJugador) const {
     return (distancia < 3.0f);
 }
 
-void Escenario::crearLuzRectangular(glm::vec3 pos) {
+void Escenario::LucesRectangulares(glm::vec3 pos) {
     ObjetoFisico panelLuz;
     panelLuz.posicion = pos;
     panelLuz.escala = glm::vec3(2.5f, 0.1f, 1.0f);
@@ -1146,7 +1147,7 @@ void Escenario::crearLuzRectangular(glm::vec3 pos) {
     luces.push_back(luz);
 }
 
-void Escenario::crearNuevaArea() {
+void Escenario::AreaCajas() {
     float sueloY = -alto / 2.0f;
     float techoY = alto / 2.0f;
     float anchoSala = 14.0f;
@@ -1318,13 +1319,13 @@ void Escenario::crearNuevaArea() {
     float luzOffsetZ = largoSala / 3.5f;
     float alturaLampara = techoY - 0.05f;
 
-    crearLuzRectangular(glm::vec3(xCentro - luzOffsetX, alturaLampara, zCentro - luzOffsetZ));
-    crearLuzRectangular(glm::vec3(xCentro + luzOffsetX, alturaLampara, zCentro - luzOffsetZ));
-    crearLuzRectangular(glm::vec3(xCentro - luzOffsetX, alturaLampara, zCentro + luzOffsetZ));
-    crearLuzRectangular(glm::vec3(xCentro + luzOffsetX, alturaLampara, zCentro + luzOffsetZ));
+    LucesRectangulares(glm::vec3(xCentro - luzOffsetX, alturaLampara, zCentro - luzOffsetZ));
+    LucesRectangulares(glm::vec3(xCentro + luzOffsetX, alturaLampara, zCentro - luzOffsetZ));
+    LucesRectangulares(glm::vec3(xCentro - luzOffsetX, alturaLampara, zCentro + luzOffsetZ));
+    LucesRectangulares(glm::vec3(xCentro + luzOffsetX, alturaLampara, zCentro + luzOffsetZ));
 }
 
-void Escenario::crearPasillosExtensionNuevaArea() {
+void Escenario::PasillosAreaCajas() {
     float sueloY = -alto / 2.0f;
     float techoY = alto / 2.0f;
     glm::vec3 colParedPasillo = glm::vec3(0.22f, 0.20f, 0.24f);
@@ -1459,8 +1460,8 @@ void Escenario::crearPasillosExtensionNuevaArea() {
 
     float alturaLampara = techoY - 0.05f;
 
-    crearLuzRectangular(glm::vec3(xNuevaAreaCentro, alturaLampara, zFinalNuevaArea + (largoPasillo / 3.0f)));
-    crearLuzRectangular(glm::vec3(xNuevaAreaCentro, alturaLampara, zFinalNuevaArea + (largoPasillo * 2.0f / 3.0f)));
+    LucesRectangulares(glm::vec3(xNuevaAreaCentro, alturaLampara, zFinalNuevaArea + (largoPasillo / 3.0f)));
+    LucesRectangulares(glm::vec3(xNuevaAreaCentro, alturaLampara, zFinalNuevaArea + (largoPasillo * 2.0f / 3.0f)));
 
     float separacionX = largoPasillo / 3.0f;
     for(int i = 1; i <= 2; i++) {
@@ -1488,7 +1489,7 @@ void Escenario::crearPasillosExtensionNuevaArea() {
     }
 }
 
-void Escenario::crearAreaFinal1() {
+void Escenario::SalaJefe() {
     float sueloY = -alto / 2.0f;
     float techoY = alto / 2.0f;
     glm::vec3 colPared = glm::vec3(0.2f, 0.2f, 0.2f);
@@ -1653,7 +1654,7 @@ void Escenario::crearAreaFinal1() {
     }
 }
 
-void Escenario::crearAreaFinal2() {
+void Escenario::AreaSeguridad() {
     float sueloY = -alto / 2.0f;
     float techoY = alto / 2.0f;
     glm::vec3 colPared = glm::vec3(0.18f, 0.2f, 0.18f);
@@ -1941,7 +1942,7 @@ void Escenario::crearAreaFinal2() {
     std::cout << "AreaFinal2: 3 mesas, 2 sillas, 2 pantallas, 2 cajones y reloj agregados" << std::endl;
 }
 
-void Escenario::crearPasillosDesdeAreaFinal2() {
+void Escenario::PasillosAreaSeguridad() {
     float sueloY = -alto / 2.0f;
     float techoY = alto / 2.0f;
     float pAlto = 5.0f;
@@ -2141,11 +2142,11 @@ void Escenario::crearPasillosDesdeAreaFinal2() {
 
     puertasMadera.push_back(Puerta(glm::vec3(18.5f, sueloY + 1.5f, 56.0f), 2.2f, 7.0f, 0.1f, 0.0f));
 
-    crearLuzRectangular(glm::vec3(xCentroD, alturaLampara, zInicioPasilloD + (largoPasilloD / 3.0f)));
-    crearLuzRectangular(glm::vec3(xCentroD, alturaLampara, zInicioPasilloD + (largoPasilloD * 2.0f / 3.0f)));
+    LucesRectangulares(glm::vec3(xCentroD, alturaLampara, zInicioPasilloD + (largoPasilloD / 3.0f)));
+    LucesRectangulares(glm::vec3(xCentroD, alturaLampara, zInicioPasilloD + (largoPasilloD * 2.0f / 3.0f)));
 }
 
-void Escenario::NuevaAreaF() {
+void Escenario::Recepcion() {
     float sueloY = -alto / 2.0f;
     float techoY = alto / 2.0f;
     float pAlto = 5.0f;
@@ -2397,9 +2398,97 @@ void Escenario::NuevaAreaF() {
 
     for(int i = 0; i < 2; i++) {
         for(int j = 0; j < 2; j++) {
-            crearLuzRectangular(glm::vec3(lucesX[i], alturaLampara, lucesZ[j]));
+            LucesRectangulares(glm::vec3(lucesX[i], alturaLampara, lucesZ[j]));
         }
     }
+}
 
-    std::cout << "NuevaAreaF: 1 mesa, 1 silla, 1 pantalla y 1 chair agregados" << std::endl;
+void Escenario::PasilloRecepcion() {
+    float sueloY = -alto / 2.0f;
+    float altoPasillo = 7.0f;
+    float techoPasillo = sueloY + altoPasillo;
+    float anchoPasillo = 10.0f;
+    float largoPasillo = 40.0f;
+    float zInicio = 74.0f;
+    float xCentro = 18.5f;
+    float zFin = zInicio + largoPasillo;
+
+    glm::vec3 colPared = glm::vec3(0.22f, 0.22f, 0.24f);
+    glm::vec3 colSuelo = glm::vec3(0.12f, 0.12f, 0.14f);
+
+    auto crearBloque = [&](glm::vec3 pos, glm::vec3 esc, glm::vec3 col, bool colision, bool textura, int texID) {
+        ObjetoFisico obj;
+        obj.posicion = pos; obj.escala = esc; obj.color = col;
+        obj.tieneColision = colision; obj.tieneTextura = textura; obj.texturaID = texID;
+        objetos.push_back(obj);
+    };
+
+    // 1. SUELO Y TECHO
+    crearBloque(glm::vec3(xCentro, sueloY, zInicio + largoPasillo/2.0f), glm::vec3(anchoPasillo, 0.05f, largoPasillo), colSuelo, true, true, texturaSuelo);
+    crearBloque(glm::vec3(xCentro, techoPasillo, zInicio + largoPasillo/2.0f), glm::vec3(anchoPasillo, 0.05f, largoPasillo), colPared, true, false, 0);
+
+    // 2. PAREDES LATERALES
+    float pAncho = 2.2f;
+    float pAlto = 5.0f;
+    float separacionPuertas = 10.0f;
+    float primeraPuertaZ = zInicio + 5.0f;
+    float xLados[2] = {xCentro - anchoPasillo/2.0f, xCentro + anchoPasillo/2.0f};
+
+    for (float x : xLados) {
+        float zActual = zInicio;
+        for (int i = 0; i < 3; i++) {
+            float zPuerta = primeraPuertaZ + (i * separacionPuertas);
+
+
+            float largoSeg = (zPuerta - pAncho/2.0f) - zActual;
+            if (largoSeg > 0.01f) crearBloque(glm::vec3(x, sueloY + altoPasillo/2.0f, zActual + largoSeg/2.0f), glm::vec3(0.1f, altoPasillo, largoSeg), colPared, true, true, texturaPared2);
+
+
+            crearBloque(glm::vec3(x, sueloY + pAlto + (altoPasillo - pAlto)/2.0f, zPuerta), glm::vec3(0.1f, altoPasillo - pAlto, pAncho), colPared, true, true, texturaPared2);
+
+
+            float rot = (x < xCentro) ? 90.0f : 270.0f;
+            Puerta nuevaPuerta(glm::vec3(x, sueloY + pAlto/2.0f, zPuerta), pAncho, pAlto, 0.1f, rot);
+            puertasMadera.push_back(nuevaPuerta);
+
+            zActual = zPuerta + pAncho/2.0f;
+        }
+        if (zActual < zFin) crearBloque(glm::vec3(x, sueloY + altoPasillo/2.0f, (zActual + zFin)/2.0f), glm::vec3(0.1f, altoPasillo, zFin - zActual), colPared, true, true, texturaPared2);
+    }
+
+    // 3. FONDO Y PUERTA CRISTAL
+    float pCristalAncho = 3.0f; float pCristalAlto = 6.0f;
+    float margen = (anchoPasillo - pCristalAncho) / 2.0f;
+
+    crearBloque(glm::vec3(xCentro - pCristalAncho/2.0f - margen/2.0f, sueloY + altoPasillo/2.0f, zFin), glm::vec3(margen, altoPasillo, 0.1f), colPared, true, true, texturaPared2);
+    crearBloque(glm::vec3(xCentro + pCristalAncho/2.0f + margen/2.0f, sueloY + altoPasillo/2.0f, zFin), glm::vec3(margen, altoPasillo, 0.1f), colPared, true, true, texturaPared2);
+    crearBloque(glm::vec3(xCentro, sueloY + pCristalAlto + (altoPasillo - pCristalAlto)/2.0f, zFin), glm::vec3(pCristalAncho, altoPasillo - pCristalAlto, 0.1f), colPared, true, true, texturaPared2);
+
+    // Cristales
+    crearBloque(glm::vec3(xCentro - pCristalAncho/4.0f, sueloY + pCristalAlto/2.0f, zFin + 0.02f), glm::vec3(pCristalAncho/2.0f - 0.05f, pCristalAlto - 0.2f, 0.04f), glm::vec3(0.6f, 0.8f, 0.9f), true, false, 0);
+    crearBloque(glm::vec3(xCentro + pCristalAncho/4.0f, sueloY + pCristalAlto/2.0f, zFin + 0.02f), glm::vec3(pCristalAncho/2.0f - 0.05f, pCristalAlto - 0.2f, 0.04f), glm::vec3(0.6f, 0.8f, 0.9f), true, false, 0);
+
+    // 4. LUCES
+    float alturaLampara = techoPasillo - 0.05f;
+    float lucesZ[4] = {zInicio + 8.0f, zInicio + 16.0f, zInicio + 24.0f, zInicio + 32.0f};
+    for(int i = 0; i < 4; i++) {
+        LucesRectangulares(glm::vec3(xCentro, alturaLampara, lucesZ[i]));
+    }
+
+    // 5. CARTEL SALIDA CON LUZ PARPADEANTE
+    crearBloque(glm::vec3(xCentro, sueloY + pCristalAlto + 0.5f, zFin - 0.06f), glm::vec3(1.0f, 0.4f, 0.05f), glm::vec3(0.0f, 0.9f, 0.2f), false, false, 0);
+
+
+    LuzPuntual luzExit;
+    luzExit.posicion = glm::vec3(xCentro, sueloY + pCristalAlto + 0.5f, zFin - 0.12f);
+    luzExit.intensidad = 0.8f;
+    luzExit.color = glm::vec3(0.1f, 1.0f, 0.2f);  // Verde
+    luzExit.parpadea = true;
+    luzExit.direction = glm::vec3(0.0f, -0.2f, -1.0f);
+    luzExit.cutOff = glm::cos(glm::radians(60.0f));
+    luzExit.outerCutOff = glm::cos(glm::radians(75.0f));
+    luzExit.tiempoParpadeo = 0.0f;
+    luzExit.offsetParpadeo = (float)(rand() % 100) / 50.0f;
+    luzExit.visible = false;
+    luces.push_back(luzExit);
 }

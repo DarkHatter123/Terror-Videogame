@@ -18,8 +18,8 @@ struct ObjetoFisico {
     glm::vec3 color;
     bool tieneColision;
     bool esPuerta;
-    bool tieneTextura = false;      // NUEVO
-    unsigned int texturaID = 0;     // NUEVO
+    bool tieneTextura = false;
+    unsigned int texturaID = 0;
     float rotacionY = 0.0f;
     bool rotarConPuerta = false;
 };
@@ -90,26 +90,27 @@ private:
     glm::vec3 posicionOriginalPuerta;
 
 
-    void setupHabitacion();
-    void setupCuboUnitario();
-    void setupEsfera();
-    void crearEstanteriasYCajas();
-    void crearLuces();
-    void crearPuertas();
+    void Bodega();
+    void Cajas();
+    void Bombillo();
+    void Estanterias();
+    void Luces();
+    void Puertas();
 
     // Funciones para el pasillo recto
-    void crearPasilloRecto();    // Cambiado: pasillo recto en lugar de L
-    void crearLuzPasillo(glm::vec3 pos);
-    void crearPuertaEnPosicion(glm::vec3 pos, bool rotada, bool conColision = true);
+    void PasilloBodega();    // Cambiado: pasillo recto en lugar de L
+    void LucesPasillo(glm::vec3 pos);
+    void PuertasMadera(glm::vec3 pos, bool rotada, bool conColision = true);
 
-    void crearNuevaArea();
-    void crearLuzRectangular(glm::vec3 pos);
-    void crearPuertaIndustrial(glm::vec3 pos, bool rotada, bool conColision);
-    void crearPasillosExtensionNuevaArea();
-    void crearAreaFinal1();
-    void crearAreaFinal2();
-    void crearPasillosDesdeAreaFinal2();
-    void NuevaAreaF();
+    void AreaCajas();
+    void LucesRectangulares(glm::vec3 pos);
+    void PuertaIndustrial(glm::vec3 pos, bool rotada, bool conColision);
+    void PasillosAreaCajas();
+    void SalaJefe();
+    void AreaSeguridad();
+    void PasillosAreaSeguridad();
+    void Recepcion();
+    void PasilloRecepcion();
 
 public:
     Escenario();
