@@ -1,6 +1,6 @@
 <h1 align="center">Unstable Anomaly</h1>
 
-## The Creators of this Project
+## Authors
 
 ## Who we are?
 
@@ -9,13 +9,13 @@ It's a 3D terror videogame programmed in CLion using C++ and OpenGL coding to cr
 
 ## What is the purpose of Unstable Anomaly?
 
-## What is the technology implemented?
+## Technology and Software used
 
 ## How can I clone the repository?
 
 ## How install the project?
 
-## What are the software and hardware requirements of your equipment?
+## Requirements
 
 ## Images of the videogame
 
