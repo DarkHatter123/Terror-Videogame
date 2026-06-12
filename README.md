@@ -1,5 +1,5 @@
 <h1 align="center">Unstable Anomaly</h1>
-
+´´´text
 ## Authors
 1)Moncada Espinoza Devans Rishi
 
@@ -16,7 +16,7 @@
 *It's a 3D terror videogame programmed in CLion using C++ and OpenGL coding to create all the environment, charged all the models, sounds, textures and create all the controls of the player. In this game, you will need to solve some puzzles in different rooms to escape of the building.*
 
 ## What is the purpose of Unstable Anomaly?
-
+The purpose of this project is bring to the user a frightened experience in this mini videogame, to pass the time, 
 ## Technology and Software used
 >OpenGL
 
@@ -33,3 +33,4 @@
 ## Images of the videogame
 
 ## Link of the video that show a gameplay of the game
+´´´
