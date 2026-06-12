@@ -1,5 +1,5 @@
 <h1 align="center">Unstable Anomaly</h1>
-´´´text
+
 ## Authors
 1)Moncada Espinoza Devans Rishi
 
@@ -33,4 +33,3 @@ The purpose of this project is bring to the user a frightened experience in this
 ## Images of the videogame
 
 ## Link of the video that show a gameplay of the game
-´´´
