@@ -24,7 +24,6 @@
 
 >Windows 11(OS)
 
--Marmota
 ## How can I clone the repository?
 
 ## How install the project?
