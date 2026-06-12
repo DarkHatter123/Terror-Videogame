@@ -1,5 +1,5 @@
 #include "Model.h"
-#include "SOIL2/SOIL2.h"
+#include "src/SOIL2/SOIL2.h"
 #include <iostream>
 
 Model::Model(const char* path) {
