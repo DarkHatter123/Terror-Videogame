@@ -22,6 +22,8 @@ It's a 3D terror videogame programmed in CLion using C++ and OpenGL coding to cr
 
 >CLion++
 
+>Windows 11(OS)
+
 ## How can I clone the repository?
 
 ## How install the project?
