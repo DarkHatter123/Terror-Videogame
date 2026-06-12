@@ -30,7 +30,11 @@
 ## How install the project?
 
 ## Requirements
+> Windows 10+
 
+> 16 GB(RAM)
+
+> NVIDIA Graphic Card
 ## Images of the videogame
 
 ## Link of the video that show a gameplay of the game
