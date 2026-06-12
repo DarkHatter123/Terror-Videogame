@@ -18,11 +18,11 @@
 ## What is the purpose of Unstable Anomaly?
 The purpose of this project is bring to the user a frightened experience in this mini videogame, to pass the time, 
 ## Technology and Software used
->OpenGL
+> 'OpenGL'
 
->CLion++
+> CLion++
 
-> - Windows 11(OS)
+> Windows 11(OS)
 
 ## How can I clone the repository?
 
