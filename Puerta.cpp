@@ -1,5 +1,5 @@
 #include "Puerta.h"
-#include "SOIL2/SOIL2.h"
+#include "src/SOIL2/SOIL2.h"
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
@@ -18,6 +18,8 @@ Puerta::Puerta(glm::vec3 pos)
     texturaID = 0;
     tieneTexturaPicaporte = false;
     texturaPicaporteID = 0;
+    abierta = false;
+    bloqueada = false;
 }
 
 // Constructor con tamaño personalizado
@@ -34,6 +36,8 @@ Puerta::Puerta(glm::vec3 pos, float anchoPuerta, float altoPuerta, float grosorP
     texturaID = 0;
     tieneTexturaPicaporte = false;
     texturaPicaporteID = 0;
+    abierta = false;
+    bloqueada = false;
 }
 
 // Constructor con tamaño personalizado y rotación base
@@ -50,6 +54,8 @@ Puerta::Puerta(glm::vec3 pos, float anchoPuerta, float altoPuerta, float grosorP
     texturaID = 0;
     tieneTexturaPicaporte = false;
     texturaPicaporteID = 0;
+    abierta = false;
+    bloqueada = false;
 }
 
 void Puerta::setTamanio(float nuevoAncho, float nuevoAlto, float nuevoGrosor)
@@ -109,12 +115,25 @@ void Puerta::setTexturaPicaporte(const char* rutaTextura)
 
 void Puerta::toggle()
 {
+    if (bloqueada)
+        return;
+
     abierta = !abierta;
 }
 
 bool Puerta::estaAbierta() const
 {
     return abierta;
+}
+
+void Puerta::setBloqueada(bool estado)
+{
+    bloqueada = estado;
+}
+
+bool Puerta::estaBloqueada() const
+{
+    return bloqueada;
 }
 
 void Puerta::update(float deltaTime)
