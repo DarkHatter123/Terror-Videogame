@@ -19,6 +19,7 @@ It's a 3D terror videogame programmed in CLion using C++ and OpenGL coding to cr
 
 ## Technology and Software used
 >OpenGL
+
 >CLion++
 
 ## How can I clone the repository?
