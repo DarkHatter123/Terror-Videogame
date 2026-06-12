@@ -2,8 +2,11 @@
 
 ## Authors
 1)Moncada Espinoza Devans Rishi
+
 2)Flores Torres Mauricio Alejandro
+
 3)Arnuero Macias Oscar Abraham
+
 4)Bustamante Quintanilla Jose Snayder
 
 ## Who we are?
