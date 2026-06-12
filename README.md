@@ -22,7 +22,7 @@ The purpose of this project is bring to the user a frightened experience in this
 
 >CLion++
 
->Windows 11(OS)
+> - Windows 11(OS)
 
 ## How can I clone the repository?
 
