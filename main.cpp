@@ -18,6 +18,7 @@
 #include "Shader.h"
 #include "Menu.h"
 #include "Menu2D.h"
+#include "MonstruoManager.h"
 
 const unsigned int SCR_WIDTH = 1600;
 const unsigned int SCR_HEIGHT = 900;
@@ -69,6 +70,11 @@ sf::SoundBuffer bufferPalanca;
 sf::Sound soundPalanca;
 bool sonidoPalancaCargado = false;
 
+// Variables para sonido del monstruo
+sf::SoundBuffer bufferMonstruo;
+sf::Sound soundMonstruo;
+bool sonidoMonstruoCargado = false;
+
 // Variables para pasos
 sf::SoundBuffer bufferPaso1;
 sf::SoundBuffer bufferPaso2;
@@ -83,6 +89,11 @@ Menu* menuMapa = nullptr;
 bool juegoPausado = false;
 bool mapaObtenido = false;
 
+// Variables para notas
+bool mostrandoNota = false;
+std::string notaActualTexto = "";
+int notaInteractuadaIndex = -1;
+
 // Variables para mensajes en pantalla
 float tiempoMensajeInicial = 0.0f;
 float tiempoMensajeMapaObtenido = 0.0f;
@@ -92,6 +103,10 @@ const float DURACION_MENSAJE = 4.0f;
 bool eventoSalidaActivado = false;
 bool puertaBloqueada = false;
 
+
+bool monstruoActivado = false;
+
+
 bool verificarColisionParedes(glm::vec3 nuevaPos) {
     // ==========================================
     // NUEVO PASILLO RECEPCIÓN
@@ -100,9 +115,7 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
         float xMin = 13.5f + RADIO_JUGADOR;
         float xMax = 23.5f - RADIO_JUGADOR;
 
-        // Paredes laterales: si está fuera del ancho, es colisión (retorna false)
         if (nuevaPos.x < xMin || nuevaPos.x > xMax) {
-            // Verificar si está en alguna de las 3 puertas laterales
             bool enPuertaLateral = false;
             for(int i = 0; i < 3; i++) {
                 float zPuerta = 79.0f + (i * 10.0f);
@@ -111,7 +124,6 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
             if (!enPuertaLateral) return false;
         }
 
-        // Puerta de cristal al final (Z = 114.0)
         bool enPuertaCristal = (nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
         if (nuevaPos.z > 114.0f - RADIO_JUGADOR && !enPuertaCristal) return false;
 
@@ -250,6 +262,7 @@ void reiniciarJuego() {
     eventoSalidaActivado = false;
     puertaBloqueada = false;
     juegoPausado = false;
+    monstruoActivado = false;
     if (menuMapa) {
         menuMapa->disable();
         menuMapa->setVisible(false);
@@ -321,45 +334,53 @@ void processInput(GLFWwindow* window, float deltaTime) {
         glm::vec3 nuevaPos = cameraPos;
         bool mover = false;
 
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            glm::vec3 dir = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
-            nuevaPos += cameraSpeed * dir;
-            mover = true;
-        }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            glm::vec3 dir = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
-            nuevaPos -= cameraSpeed * dir;
-            mover = true;
-        }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            glm::vec3 derecha = glm::normalize(glm::cross(cameraFront, cameraUp));
-            glm::vec3 derechaH = glm::normalize(glm::vec3(derecha.x, 0.0f, derecha.z));
-            nuevaPos -= derechaH * cameraSpeed;
-            mover = true;
-        }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            glm::vec3 derecha = glm::normalize(glm::cross(cameraFront, cameraUp));
-            glm::vec3 derechaH = glm::normalize(glm::vec3(derecha.x, 0.0f, derecha.z));
-            nuevaPos += derechaH * cameraSpeed;
-            mover = true;
-        }
-
-        if (mover) {
-            if (verificarColisionParedes(nuevaPos) && escenario && !escenario->verificarColisionObjetos(nuevaPos, RADIO_JUGADOR)) {
-                cameraPos = nuevaPos;
-                cameraPos.y = ALTURA_JUGADOR;
-            }
-            tiempoAcumuladoPasos += deltaTime;
-            estaCorriendo = corriendo;
-            float intervaloActual = estaCorriendo ? 0.2f : 0.4f;
-            if (tiempoAcumuladoPasos >= intervaloActual) {
-                tiempoAcumuladoPasos = 0.0f;
-                reproducirPaso();
-            }
+        // ==================== VERIFICAR SI EL JUGADOR ESTÁ ATRAPADO ====================
+        if (escenario && escenario->isJugadorAtrapado()) {
+            // El jugador está atrapado, no puede moverse
+            // Solo puede presionar ESC para salir al menú
         } else {
-            tiempoAcumuladoPasos = 0.0f;
-            estaCorriendo = false;
+            // Movimiento normal del jugador
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+                glm::vec3 dir = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
+                nuevaPos += cameraSpeed * dir;
+                mover = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                glm::vec3 dir = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
+                nuevaPos -= cameraSpeed * dir;
+                mover = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                glm::vec3 derecha = glm::normalize(glm::cross(cameraFront, cameraUp));
+                glm::vec3 derechaH = glm::normalize(glm::vec3(derecha.x, 0.0f, derecha.z));
+                nuevaPos -= derechaH * cameraSpeed;
+                mover = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                glm::vec3 derecha = glm::normalize(glm::cross(cameraFront, cameraUp));
+                glm::vec3 derechaH = glm::normalize(glm::vec3(derecha.x, 0.0f, derecha.z));
+                nuevaPos += derechaH * cameraSpeed;
+                mover = true;
+            }
+
+            if (mover) {
+                if (verificarColisionParedes(nuevaPos) && escenario && !escenario->verificarColisionObjetos(nuevaPos, RADIO_JUGADOR)) {
+                    cameraPos = nuevaPos;
+                    cameraPos.y = ALTURA_JUGADOR;
+                }
+                tiempoAcumuladoPasos += deltaTime;
+                estaCorriendo = corriendo;
+                float intervaloActual = estaCorriendo ? 0.2f : 0.4f;
+                if (tiempoAcumuladoPasos >= intervaloActual) {
+                    tiempoAcumuladoPasos = 0.0f;
+                    reproducirPaso();
+                }
+            } else {
+                tiempoAcumuladoPasos = 0.0f;
+                estaCorriendo = false;
+            }
         }
+        // ==================================================================================
 
         // Tecla F: linterna
         static bool lastFState = false;
@@ -369,26 +390,79 @@ void processInput(GLFWwindow* window, float deltaTime) {
         lastFState = currentFState;
         if (escenario) escenario->setFlashlight(cameraPos, cameraFront, flashlightOn);
 
-        // Tecla E: interactuar
-        static bool ePresionada = false;
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !ePresionada) {
-            if (escenario) escenario->togglePuertaMadera(cameraPos);
-            if (escenario && escenario->jugadorCercaDePuerta(cameraPos)) {
-                escenario->togglePuerta();
-                if (sonidoCargado) soundPuerta.play();
+        // Tecla E: interactuar (solo si no está atrapado)
+        if (!escenario || !escenario->isJugadorAtrapado()) {
+            static bool ePresionada = false;
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !ePresionada) {
+                // 1. NOTAS (prioridad máxima)
+                if (escenario) {
+                    std::string textoNota;
+                    int idxNota = -1;
+                    if (escenario->jugadorCercaNota(cameraPos, textoNota, idxNota)) {
+                        mostrandoNota = true;
+                        notaActualTexto = textoNota;
+                        notaInteractuadaIndex = idxNota;
+                        juegoPausado = true;
+                        savedCameraFront = cameraFront;
+                        savedYaw = yaw;
+                        savedPitch = pitch;
+                        cameraStateSaved = true;
+                        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                        ePresionada = true;
+                        return;
+                    }
+                }
+
+                // 2. BOTONES DEL PUZZLE
+                if (escenario) {
+                    int idxBoton = -1;
+                    if (escenario->jugadorCercaBoton(cameraPos, idxBoton)) {
+                        escenario->presionarBoton(idxBoton);
+                        ePresionada = true;
+                        return;
+                    }
+                }
+
+                // Activar el monstruo
+                if (escenario && !monstruoActivado) {
+                    glm::vec3 posBotonSalida(-3.0f, -2.5f, 67.9f);
+                    float distanciaBoton = glm::distance(cameraPos, posBotonSalida);
+
+                    if (distanciaBoton < 2.0f && escenario->isPuzzleResuelto() && !escenario->isMonstruoActivo()) {
+                        escenario->activarMonstruo(glm::vec3(9.5f, -2.5f, 28.0f));
+                        monstruoActivado = true;
+                        if (sonidoMonstruoCargado) soundMonstruo.play();
+                        std::cout << "¡El monstruo ha sido liberado! Ten cuidado, te perseguira si te ve." << std::endl;
+                        ePresionada = true;
+                        return;
+                    }
+                }
+                // ============================================================
+
+                // 3. PUERTAS DE MADERA (normales)
+                if (escenario) escenario->togglePuertaMadera(cameraPos);
+
+                // 4. PUERTA INDUSTRIAL (la grande de la bodega)
+                if (escenario && escenario->jugadorCercaDePuerta(cameraPos)) {
+                    escenario->togglePuerta();
+                    if (sonidoCargado) soundPuerta.play();
+                }
+
+                // 5. PALANCA (solo si el puzzle está resuelto)
+                if (escenario && escenario->jugadorCercaPalanca(cameraPos)) {
+                    escenario->togglePalanca();
+                    if (sonidoPalancaCargado) soundPalanca.play();
+                }
+
+                ePresionada = true;
             }
-            if (escenario && escenario->jugadorCercaPalanca(cameraPos)) {
-                escenario->togglePalanca();
-                if (sonidoPalancaCargado) soundPalanca.play();
-            }
-            ePresionada = true;
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) ePresionada = false;
         }
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) ePresionada = false;
 
         // Tecla M: ABRIR mapa
         static bool lastMState = false;
         bool currentMState = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
-        if (currentMState && !lastMState && mapaObtenido && menuMapa && !menuMapa->isVisible() && !juegoPausado) {
+        if (currentMState && !lastMState && mapaObtenido && menuMapa && !menuMapa->isVisible() && !juegoPausado && !mostrandoNota) {
             juegoPausado = true;
             menuMapa->setVisible(true);
             savedCameraFront = cameraFront;
@@ -428,6 +502,11 @@ void processInput(GLFWwindow* window, float deltaTime) {
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     if (juegoPausado || currentState != PLAY) return;
+
+    if (escenario && escenario->isJugadorAtrapado()) {
+        return;
+    }
+
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
     if (firstMouse) { lastX = xpos; lastY = ypos; firstMouse = false; }
@@ -448,6 +527,11 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     if (juegoPausado || currentState != PLAY) return;
+
+    if (escenario && escenario->isJugadorAtrapado()) {
+        return;
+    }
+
     fov -= (float)yoffset;
     if (fov < 1.0f) fov = 1.0f;
     if (fov > 45.0f) fov = 45.0f;
@@ -479,7 +563,18 @@ void inicializarBodega() {
         sonidoPalancaCargado = true;
         soundPalanca.setVolume(60.0f);
     }
+    //Aqui dejo pal sonido loco nomas lo buscas
+    if (bufferMonstruo.loadFromFile("sounds/SFX/monstruo.wav")) {
+        soundMonstruo.setBuffer(bufferMonstruo);
+        sonidoMonstruoCargado = true;
+        soundMonstruo.setVolume(80.0f);
+    }
     escenario = new Escenario();
+
+    // ==================== INICIALIZAR MONSTRUO ====================
+    escenario->inicializarMonstruo();
+    monstruoActivado = false;
+    // ==============================================================
 
     std::vector<std::string> faces;
     faces.push_back("Textures/px.jpg");
@@ -550,7 +645,7 @@ int main() {
 
     // Inicializar menú del mapa
     menuMapa = new Menu();
-    if (!menuMapa->loadTexture("Textures/mapa.png")) std::cout << "Advertencia: No se pudo cargar la textura del mapa" << std::endl;
+    if (!menuMapa->loadTexture("Textures/mapa.jpg")) std::cout << "Advertencia: No se pudo cargar la textura del mapa" << std::endl;
     menuMapa->disable();
     menuMapa->setVisible(false);
 
@@ -602,6 +697,17 @@ int main() {
 
         if (currentState == PLAY && juego3DInicializado && escenario && !juegoPausado && !menuMapa->isVisible()) {
             escenario->update(deltaTime);
+
+            // ==================== ACTUALIZAR MONSTRUO ====================
+            if (escenario->isMonstruoActivo()) {
+                escenario->actualizarMonstruo(deltaTime, cameraPos);
+
+                if (escenario->isJugadorAtrapado()) {
+                    std::cout << "¡El monstruo te ha atrapado! Game Over. Regresa al menú principal." << std::endl;
+                }
+            }
+            // ==============================================================
+
             processInput(window, deltaTime);
             if (!eventoSalidaActivado && jugadorEnZonaSalida(cameraPos)) {
                 eventoSalidaActivado = true;
@@ -665,6 +771,37 @@ int main() {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.05f, 0.15f, 0.35f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.25f, 0.55f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.02f, 0.1f, 0.25f, 1.0f));
+
+        // Mostrar ventana de nota si corresponde
+        if (mostrandoNota) {
+            ImGui::SetNextWindowSize(ImVec2(550, 350), ImGuiCond_Always);
+            ImGui::SetNextWindowPos(ImVec2(windowWidth / 2 - 275, windowHeight / 2 - 175), ImGuiCond_Always);
+            ImGui::Begin("Nota", &mostrandoNota, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
+            ImGui::PushTextWrapPos(ImGui::GetWindowSize().x - 30);
+            ImGui::TextWrapped("%s", notaActualTexto.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::Separator();
+            if (ImGui::Button("Cerrar", ImVec2(120, 40))) {
+                mostrandoNota = false;
+                juegoPausado = false;
+                if (escenario && notaInteractuadaIndex != -1) {
+                    escenario->marcarNotaLeida(notaInteractuadaIndex);
+                    notaInteractuadaIndex = -1;
+                }
+                if (cameraStateSaved) {
+                    cameraFront = savedCameraFront;
+                    yaw = savedYaw;
+                    pitch = savedPitch;
+                    cameraStateSaved = false;
+                }
+                glfwSetCursorPos(window, SCR_WIDTH / 2, SCR_HEIGHT / 2);
+                lastX = SCR_WIDTH / 2;
+                lastY = SCR_HEIGHT / 2;
+                firstMouse = true;
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            }
+            ImGui::End();
+        }
 
         // MENÚ PRINCIPAL
         if (currentState == MENU_PRINCIPAL) {

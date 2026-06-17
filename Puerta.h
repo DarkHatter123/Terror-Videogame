@@ -18,7 +18,7 @@ private:
     bool tieneTextura;
     unsigned int texturaPicaporteID;
     bool tieneTexturaPicaporte;
-
+    bool bloqueada;
 public:
     Puerta(glm::vec3 pos);
     Puerta(glm::vec3 pos, float anchoPuerta, float altoPuerta, float grosorPuerta);
@@ -34,7 +34,10 @@ public:
     bool jugadorCerca(glm::vec3 jugadorPos);
     bool verificarColision(glm::vec3 jugadorPos, float radioJugador) const;
     void render(unsigned int shaderProgramID);
+    void setBloqueada(bool estado);
+    bool estaBloqueada() const;
 
     glm::vec3 getPosicion() const { return posicion; }
     bool isAbierta() const { return abierta; }
+
 };

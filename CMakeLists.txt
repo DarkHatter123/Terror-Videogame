@@ -61,6 +61,12 @@ set(IMGUI_SOURCES
         ${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp
         Menu.cpp
         Menu2D.cpp
+        Nota.cpp
+        Boton.cpp
+        Monstruo.cpp
+        Monstruo.h
+        MonstruoManager.cpp
+        MonstruoManager.h
 )
 
 # ========================

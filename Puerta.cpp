@@ -18,6 +18,8 @@ Puerta::Puerta(glm::vec3 pos)
     texturaID = 0;
     tieneTexturaPicaporte = false;
     texturaPicaporteID = 0;
+    abierta = false;
+    bloqueada = false;
 }
 
 // Constructor con tamaño personalizado
@@ -34,6 +36,8 @@ Puerta::Puerta(glm::vec3 pos, float anchoPuerta, float altoPuerta, float grosorP
     texturaID = 0;
     tieneTexturaPicaporte = false;
     texturaPicaporteID = 0;
+    abierta = false;
+    bloqueada = false;
 }
 
 // Constructor con tamaño personalizado y rotación base
@@ -50,6 +54,8 @@ Puerta::Puerta(glm::vec3 pos, float anchoPuerta, float altoPuerta, float grosorP
     texturaID = 0;
     tieneTexturaPicaporte = false;
     texturaPicaporteID = 0;
+    abierta = false;
+    bloqueada = false;
 }
 
 void Puerta::setTamanio(float nuevoAncho, float nuevoAlto, float nuevoGrosor)
@@ -70,6 +76,7 @@ void Puerta::setTextura(const char* rutaTextura)
 
     if (texturaID == 0) {
         std::cout << "Error al cargar textura de puerta: " << rutaTextura << std::endl;
+        std::cout << "Razón: " << SOIL_last_result() << std::endl;
         tieneTextura = false;
     } else {
         glBindTexture(GL_TEXTURE_2D, texturaID);
@@ -93,6 +100,7 @@ void Puerta::setTexturaPicaporte(const char* rutaTextura)
 
     if (texturaPicaporteID == 0) {
         std::cout << "Error al cargar textura de picaporte: " << rutaTextura << std::endl;
+        std::cout << "Razón: " << SOIL_last_result() << std::endl;
         tieneTexturaPicaporte = false;
     } else {
         glBindTexture(GL_TEXTURE_2D, texturaPicaporteID);
@@ -107,12 +115,25 @@ void Puerta::setTexturaPicaporte(const char* rutaTextura)
 
 void Puerta::toggle()
 {
+    if (bloqueada)
+        return;
+
     abierta = !abierta;
 }
 
 bool Puerta::estaAbierta() const
 {
     return abierta;
+}
+
+void Puerta::setBloqueada(bool estado)
+{
+    bloqueada = estado;
+}
+
+bool Puerta::estaBloqueada() const
+{
+    return bloqueada;
 }
 
 void Puerta::update(float deltaTime)
@@ -174,6 +195,17 @@ void Puerta::render(unsigned int shaderProgramID)
     unsigned int modelLoc = glGetUniformLocation(shaderProgramID, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
 
+    // Configurar textura de la puerta
+    if (tieneTextura) {
+        glUniform1i(glGetUniformLocation(shaderProgramID, "usarTextura"), 1);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texturaID);
+        glUniform1i(glGetUniformLocation(shaderProgramID, "textura"), 0);
+    } else {
+        glUniform1i(glGetUniformLocation(shaderProgramID, "usarTextura"), 0);
+        glUniform3f(glGetUniformLocation(shaderProgramID, "objectColor"), 0.45f, 0.25f, 0.1f);
+    }
+
     static unsigned int cubeVAO = 0, cubeVBO = 0, cubeEBO = 0;
     if (cubeVAO == 0) {
         float vertices[] = {
@@ -228,17 +260,6 @@ void Puerta::render(unsigned int shaderProgramID)
         glEnableVertexAttribArray(2);
     }
 
-    // Configurar textura de la puerta
-    if (tieneTextura) {
-        glUniform1i(glGetUniformLocation(shaderProgramID, "usarTextura"), 1);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texturaID);
-        glUniform1i(glGetUniformLocation(shaderProgramID, "textura"), 0);
-    } else {
-        glUniform1i(glGetUniformLocation(shaderProgramID, "usarTextura"), 0);
-        glUniform3f(glGetUniformLocation(shaderProgramID, "objectColor"), 0.45f, 0.25f, 0.1f);
-    }
-
     glBindVertexArray(cubeVAO);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
@@ -291,4 +312,5 @@ void Puerta::render(unsigned int shaderProgramID)
     // Restaurar estado
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
+    glUniform1i(glGetUniformLocation(shaderProgramID, "usarTextura"), 0);
 }
