@@ -1,9 +1,13 @@
 <h1 align="center">UNSTABLE ANOMALY</h1>
 
 ## Authors
+
 -Moncada Espinoza Devans Rishi
+
 -Flores Torres Mauricio Alejandro
+
 -Arnuero Macias Oscar Abraham
+
 -Bustamante Quintanilla Jose Snayder
 
 ## Who we are?
