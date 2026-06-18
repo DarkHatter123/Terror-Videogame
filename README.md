@@ -12,7 +12,7 @@
 
 ## Who we are?
 
-"We are students of the National University of Engineering, making a terror videogame for the signature Programation Graphics in our 3rd year of career, being the final project of the curse."
+*We are students of the National University of Engineering, making a terror videogame for the signature Programation Graphics in our 3rd year of career, being the final project of the curse.*
 
 ## What is this project?
 
