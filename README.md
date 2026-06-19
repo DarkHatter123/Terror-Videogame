@@ -16,11 +16,28 @@
 
 ## What is this project?
 
+
 ## What's the purpose of this project?
 
 ## Software Used
 
+>CLion 2026 1.1
+
+>Blender 5.1.2
+
+>OpenGL
+
 ## Requeriments
+
+>OS: Windows 10/11
+
+>RAM: 3GB to play the game
+
+>CPU: Intel Core i3 of 4th Generation
+
+>Graphic Card: Integrated(NVIDIA, AMD, Intel)
+
+>Weight: -----
 
 ## How clone this repository?
 
