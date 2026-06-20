@@ -86,6 +86,16 @@
 
 ## How install this videogame?
 
+Well, i am going to explain you the process to download this videogmae, read quickly:
+
+>1) First, press the green button with the text "<> Code v".
+
+>2) Later, go to "Local" and press "Download Zip"
+
+>3) Then, put the zip wherever you want in your dispositive(Desk PC, or Laptop)
+
+>4) Finally, decompress the full zip, enter to the carpet and execute the archive "Unstable_Anomaly.exe".
+
 ## Images
 
 ## Link of the video
