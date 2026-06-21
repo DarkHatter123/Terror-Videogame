@@ -27,11 +27,7 @@ public:
     void setTamanio(float nuevoAncho, float nuevoAlto, float nuevoGrosor);
     void setTextura(const char* rutaTextura);
     void setTexturaPicaporte(const char* rutaTextura);
-<<<<<<< HEAD
     bool toggle(); // returns true if door actually toggled, false if blocked
-=======
-    void toggle();
->>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     bool estaAbierta() const;
     void update(float deltaTime);
     glm::mat4 getModelMatrix();

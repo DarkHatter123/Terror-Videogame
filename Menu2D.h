@@ -11,11 +11,7 @@
 #include <string>
 
 #include "Shader.h"
-<<<<<<< HEAD
 #include <src/SOIL2/SOIL2.h>
-=======
-#include <SOIL2.h>
->>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
 // Variables de renderizado 2D
 extern unsigned int VAO_MenuFondo, VAO_PanelIzq, VAO_PanelDer, VAO_AdornoSuperior, VAO_LineaBlanca, VAO_LineaMorada;

@@ -53,7 +53,6 @@ public:
     glm::vec3 scale;
     
     Model(const char* path);
-<<<<<<< HEAD
     Model(const Model& other);
     Model& operator=(const Model& other);
     ~Model();
@@ -68,14 +67,6 @@ public:
     float getAnimationDuration() const;
     int getMeshCount() const { return (int)meshes.size(); }
     int getBoneCount() const { return boneCount; }
-=======
-    Model(const Model& other);  // ← Constructor de copia
-    Model& operator=(const Model& other);  // ← Operador de asignación
-    ~Model();  // ← Destructor
-
-    void Draw(Shader &shader);
-    void setManualTexture(const char* texturePath);
->>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     
 private:
     std::vector<Mesh> meshes;
