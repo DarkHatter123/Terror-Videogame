@@ -97,5 +97,26 @@ Well, i am going to explain you the process to download this videogmae, read qui
 >4) Finally, decompress the full zip, enter to the carpet and execute the archive "Unstable_Anomaly.exe".
 
 ## Images
+<img width="975" height="571" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (10)" src="https://github.com/user-attachments/assets/5c22e534-d224-4668-98c1-e49f4691c13b" />
+<img width="975" height="568" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (9)" src="https://github.com/user-attachments/assets/4d571082-e301-4135-ad6d-9b3851b23f50" />
+<img width="975" height="568" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (8)" src="https://github.com/user-attachments/assets/2e886f70-b442-4f7f-8b7c-aed35883169f" />
+<img width="975" height="566" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (7)" src="https://github.com/user-attachments/assets/71302f9f-5485-4d0c-96dd-6f1bb74dba54" />
+<img width="975" height="571" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (6)" src="https://github.com/user-attachments/assets/3ef16cb9-97ef-483d-99d3-0492c96cd61e" />
+<img width="975" height="569" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (5)" src="https://github.com/user-attachments/assets/216bca39-db82-40ca-a266-1b78b6a96bf0" />
+<img width="975" height="565" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (4)" src="https://github.com/user-attachments/assets/79bf3497-dcdc-4b89-b5b7-316ba53a08ab" />
+<img width="975" height="570" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (3)" src="https://github.com/user-attachments/assets/9eb4b04a-a1b5-4f33-82f2-98ef73ad7cce" />
+<img width="975" height="570" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (2)" src="https://github.com/user-attachments/assets/49c8e736-a5aa-4292-b5b6-139074cb031e" />
+<img width="975" height="571" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (1)" src="https://github.com/user-attachments/assets/0cf877f5-f7c3-426c-b348-8abe80e483d5" />
+<img width="975" height="521" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM" src="https://github.com/user-attachments/assets/c0f5012a-ebc8-435c-89f5-4013a06cfa84" />
+<img width="975" height="570" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (19)" src="https://github.com/user-attachments/assets/7d4471ad-d85e-47c3-81a0-bf21ea58f73b" />
+<img width="975" height="572" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (18)" src="https://github.com/user-attachments/assets/1f026a50-eb0c-4ddc-9d89-a2ec2bc04aec" />
+<img width="975" height="567" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (17)" src="https://github.com/user-attachments/assets/9701448e-e046-4707-81b2-e66ca6eee0a7" />
+<img width="975" height="565" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (16)" src="https://github.com/user-attachments/assets/ca28530e-4c79-4d7d-9638-3246aba3c608" />
+<img width="975" height="565" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (15)" src="https://github.com/user-attachments/assets/b18520b6-7e31-4744-b9a0-91ce12e89604" />
+<img width="975" height="563" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (14)" src="https://github.com/user-attachments/assets/132d2a85-1f00-4b0d-8d1d-9f48ee99245d" />
+<img width="975" height="566" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (13)" src="https://github.com/user-attachments/assets/8ee2cd47-5e35-448c-a48b-179e0158b075" />
+<img width="975" height="567" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (12)" src="https://github.com/user-attachments/assets/4e1db8e1-0ffa-447d-ac83-4c51d0f85cbc" />
+<img width="975" height="563" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (11)" src="https://github.com/user-attachments/assets/ea05fe94-cb8b-47d5-803f-90eda14e6119" />
+
 
 ## Link of the video
