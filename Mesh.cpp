@@ -32,6 +32,14 @@ void Mesh::setupMesh() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
     glEnableVertexAttribArray(2);
     
+    // Bone IDs (location 3)
+    glEnableVertexAttribArray(3);
+    glVertexAttribIPointer(3, 4, GL_INT, sizeof(Vertex), (void*)offsetof(Vertex, boneIds));
+    
+    // Bone weights (location 4)
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, weights));
+    
     glBindVertexArray(0);
 }
 

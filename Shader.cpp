@@ -77,6 +77,10 @@ void Shader::setMat4(const std::string &name, const glm::mat4 &mat) const {
     glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, glm::value_ptr(mat));
 }
 
+void Shader::setMat4Array(const std::string &name, int count, const glm::mat4* mats) const {
+    glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), count, GL_FALSE, glm::value_ptr(mats[0]));
+}
+
 void Shader::checkCompileErrors(unsigned int shader, std::string type) {
     int success;
     char infoLog[1024];

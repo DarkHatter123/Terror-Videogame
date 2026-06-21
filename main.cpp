@@ -3,12 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
-#include <iomanip>
 #include <chrono>
-#include <thread>
-#include <cmath>
-#include <vector>
-#include <string>
 
 // Audio SFML
 #include <SFML/Audio.hpp>
@@ -18,23 +13,23 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
-// Archivos del proyecto Proyecto_Terror (sin modificar)
+// SOIL2
+#include "src/SOIL2/SOIL2.h"
+
 #include "Skybox.h"
 #include "Escenario.h"
-#include "Lampara.h"
 #include "Shader.h"
 #include "Menu.h"
-#include <SOIL2.h>
+#include "Menu2D.h"
+#include "MonstruoManager.h"
+#include "Boton.h"
+#include "Monstruo.h"
+#include "Nota.h"
 
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
+const unsigned int SCR_WIDTH = 1600;
+const unsigned int SCR_HEIGHT = 900;
 
-// Variables para pantalla completa
-bool isFullscreen = false;
-int windowedPosX, windowedPosY, windowedWidth, windowedHeight;
-GLFWwindow* window;
-
-// Variables de la bodega 3D (usando clases de Proyecto_Terror)
+// Variables de la bodega 3D
 Escenario* escenario = nullptr;
 Skybox* skybox = nullptr;
 bool juego3DInicializado = false;
@@ -56,6 +51,8 @@ float pitch = 0.0f;
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 float fov = 45.0f;
+extern Model* modeloPalancaGlobal;
+extern Model* modeloPalanca2Global;
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -81,6 +78,26 @@ sf::SoundBuffer bufferPalanca;
 sf::Sound soundPalanca;
 bool sonidoPalancaCargado = false;
 
+// Variables para sonido del monstruo
+sf::SoundBuffer bufferMonstruo;
+sf::Sound soundMonstruo;
+bool sonidoMonstruoCargado = false;
+
+// Variables para sonido de rugido del monstruo
+sf::SoundBuffer bufferRugido;
+sf::Sound soundRugido;
+bool sonidoRugidoCargado = false;
+
+// Variables para sonido de boton
+sf::SoundBuffer bufferBoton;
+sf::Sound soundBoton;
+bool sonidoBotonCargado = false;
+
+// Variables para sonido de puerta de madera
+sf::SoundBuffer bufferPuertaMadera;
+sf::Sound soundPuertaMadera;
+bool sonidoPuertaMaderaCargado = false;
+
 // Variables para pasos
 sf::SoundBuffer bufferPaso1;
 sf::SoundBuffer bufferPaso2;
@@ -93,296 +110,215 @@ float tiempoAcumuladoPasos = 0.0f;
 // Variables para el menú
 Menu* menuMapa = nullptr;
 bool juegoPausado = false;
-
-// Variable para saber si el mapa ha sido obtenido
 bool mapaObtenido = false;
+
+// Variables para notas
+bool mostrandoNota = false;
+std::string notaActualTexto = "";
+int notaInteractuadaIndex = -1;
 
 // Variables para mensajes en pantalla
 float tiempoMensajeInicial = 0.0f;
 float tiempoMensajeMapaObtenido = 0.0f;
 const float DURACION_MENSAJE = 4.0f;
 
-// Estados del juego para el menú 2D
-enum GameState {
-    MENU_PRINCIPAL,
-    PLAY,
-    LOADING,
-    MANUAL,
-    CREDITS,
-    PAUSE_MENU,
-    MANUAL_FROM_PAUSE
-};
+// Estado de salida
+bool eventoSalidaActivado = false;
+bool puertaBloqueada = false;
 
-GameState currentState = MENU_PRINCIPAL;
-bool manualVisto = false;
-float tiempoMensajeBloqueo = 0.0f;
-const float DURACION_MENSAJE_BLOQUEO = 2.0f;
+bool monstruoActivado = false;
 
-// Variables para la pantalla de carga
-auto loadingStartTime = std::chrono::steady_clock::now();
-auto lastPuntoTime = std::chrono::steady_clock::now();
-int puntosIndex = 0;
-bool luzBlancoAmarillentoEncendida = true;
-auto lastLuzBlink = std::chrono::steady_clock::now();
+// ==================== VARIABLES PARA GAME OVER ====================
+bool gameOverActivo = false;
+bool gameOverMostrandoMenu = false;
+float tiempoGameOver = 0.0f;
+float sangreOpacity = 0.0f;
+float oscurecimientoOpacity = 0.0f;
+bool visionGuardada = false;
+glm::vec3 visionOriginal;
+glm::vec3 upOriginal;
+float caidaY = 0.0f;
+unsigned int VAO_Overlay = 0;
+unsigned int VBO_Overlay = 0;
+Shader* overlayShader = nullptr;
+unsigned int texturaGameOverID = 0;
+bool texturaGameOverCargada = false;
+// ================================================================
 
-// Variables del parpadeo de luz central
-bool luzBlancaEncendida = true;
-auto lastBlinkTime = std::chrono::steady_clock::now();
+// ==================== VARIABLES PARA SECUENCIA FINAL ====================
+bool secuenciaFinalActiva = false;
+bool secuenciaFinalMostrandoImagenes = true;
+float tiempoSecuenciaFinal = 0.0f;
+int imagenActual = 0;
+const int TOTAL_IMAGENES = 5;
+const float DURACION_IMAGEN = 8.0f;
+unsigned int texturasFinales[5] = {0, 0, 0, 0, 0};
+bool texturasFinalesCargadas[5] = {false, false, false, false, false};
+unsigned int VAO_SecuenciaFinal = 0;
+unsigned int VBO_SecuenciaFinal = 0;
 
-// ==================== FUNCIÓN PARA CARGAR TEXTURAS ====================
-unsigned int cargarTexturaMenu(const char* path) {
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
+bool secuenciaFinalTerminada = false;
+Shader* shaderSecuenciaFinal = nullptr;
+// ========================================================================
 
-    int width, height, channels;
-    unsigned char* data = SOIL_load_image(path, &width, &height, &channels, SOIL_LOAD_RGBA);
+// ==================== FUNCIONES PARA LA SECUENCIA FINAL ====================
 
-    if (data) {
+unsigned int cargarTexturaSecuencia(const char* path) {
+    unsigned int textureID = SOIL_load_OGL_texture(
+        path,
+        SOIL_LOAD_RGB,
+        SOIL_CREATE_NEW_ID,
+        SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y
+    );
+
+    if (textureID == 0) {
+        std::cout << "❌ Error al cargar textura con SOIL2: " << path << std::endl;
+        std::cout << "Razón: " << SOIL_last_result() << std::endl;
+    } else {
+        std::cout << "✅ Textura cargada correctamente: " << path << std::endl;
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        free(data);
-        std::cout << "Textura cargada: " << path << std::endl;
-    } else {
-        std::cout << "Error al cargar textura: " << path << std::endl;
     }
     return textureID;
 }
 
-// ==================== VERTICES DEL MENU 2D ====================
-GLfloat verticesMenuFondo[] = {
-    -1.0f,-1.0f,0.0f, 0.50f,0.50f,0.50f,
-     1.0f,-1.0f,0.0f, 0.50f,0.50f,0.50f,
-    -0.6f, 0.6f,0.0f, 0.50f,0.50f,0.50f,
-     0.6f, 0.6f,0.0f, 0.50f,0.50f,0.50f,
-};
-GLuint indicesMenuFondo[] = { 0,2,3, 0,3,1 };
+void cargarTexturasSecuenciaFinal() {
+    const char* rutas[TOTAL_IMAGENES] = {
+        "Textures/Credits1.png",
+        "Textures/Credits2.png",
+        "Textures/Credits3.png",
+        "Textures/Credits4.png",
+        "Textures/Credits5.png"
+    };
 
-GLfloat verticesPanelIzq[] = {
-    -1.0f, -1.0f, 0.0f,   0.25f,0.25f,0.25f,
-    -1.0f,  0.4f, 0.0f,   0.25f,0.25f,0.25f,
-    -0.4f,  0.4f, 0.0f,   0.25f,0.25f,0.25f,
-    -0.4f, -1.0f, 0.0f,   0.25f,0.25f,0.25f
-};
-GLuint indicesPanelIzq[] = { 0,1,2, 0,2,3 };
+    for (int i = 0; i < TOTAL_IMAGENES; i++) {
+        texturasFinales[i] = cargarTexturaSecuencia(rutas[i]);
+        if (texturasFinales[i] != 0) {
+            texturasFinalesCargadas[i] = true;
+            std::cout << "✅ Textura final " << i+1 << " cargada: " << rutas[i] << std::endl;
+        } else {
+            std::cout << "❌ Error cargando textura: " << rutas[i] << std::endl;
+        }
+    }
+}
 
-GLfloat verticesPanelDer[] = {
-    0.4f, -1.0f, 0.0f,    0.25f,0.25f,0.25f,
-    0.4f,  0.4f, 0.0f,    0.25f,0.25f,0.25f,
-    1.0f,  0.4f, 0.0f,    0.25f,0.25f,0.25f,
-    1.0f, -1.0f, 0.0f,    0.25f,0.25f,0.25f,
-};
-GLuint indicesPanelDer[] = { 0,1,2, 0,2,3 };
+void renderizarSecuenciaFinal(int windowWidth, int windowHeight) {
+    if (!secuenciaFinalActiva) return;
 
-GLfloat verticesAdornoSuperior[] = {
-    -0.8f,  0.85f, 0.0f,   0.15f, 0.15f, 0.15f,
-    -0.65f,  0.4f, 0.0f,   0.15f, 0.15f, 0.15f,
-    -0.60f,  0.6f, 0.0f,   0.15f, 0.15f, 0.15f,
-    0.6f,  0.6f, 0.0f,     0.15f, 0.15f, 0.15f,
-    0.65f,  0.4f, 0.0f,    0.15f, 0.15f, 0.15f,
-    0.8f,  0.85f, 0.0f,    0.15f, 0.15f, 0.15f
-};
-GLuint indicesAdornoSuperior[] = { 0,1,2, 0,2,5, 3,4,5, 3,0,5, 0,1,3, 1,3,5 };
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-GLfloat verticesLineaBlanca[] = {
-    -1.0f,  0.5f, 0.0f,   0.10f, 0.10f, 0.10f,
-    -1.0f,  0.4f, 0.0f,   0.10f, 0.10f, 0.10f,
-    1.0f,  0.4f, 0.0f,    0.10f, 0.10f, 0.10f,
-    1.0f,  0.5f, 0.0f,    0.10f, 0.10f, 0.10f
-};
-GLuint indicesLineaBlanca[] = { 0,1,2, 0,2,3 };
+    if (secuenciaFinalMostrandoImagenes) {
+        if (!shaderSecuenciaFinal) {
+            shaderSecuenciaFinal = new Shader("shaders/texture.vert", "shaders/texture.frag");
+        }
 
-GLfloat verticesLineaMorada[] = {
-    -1.0f,  0.6f, 0.0f,   0.21f, 0.00f, 0.25f,
-    -1.0f,  0.5f, 0.0f,   0.21f, 0.00f, 0.25f,
-    1.0f,  0.5f, 0.0f,    0.21f, 0.00f, 0.25f,
-    1.0f,  0.6f, 0.0f,    0.21f, 0.00f, 0.25f
-};
-GLuint indicesLineaMorada[] = { 0,1,2, 0,2,3 };
+        shaderSecuenciaFinal->use();
 
-GLfloat verticesMarcoSuperior[] = {
-    -0.7f,  1.0f, 0.0f,   0.34f, 0.14f, 0.39f,
-    -0.8f,  0.85f, 0.0f,  0.34f, 0.14f, 0.39f,
-    0.8f,  0.85f, 0.0f,   0.34f, 0.14f, 0.39f,
-    0.7f,  1.0f, 0.0f,    0.34f, 0.14f, 0.39f
-};
-GLuint indicesMarcoSuperior[] = { 0,1,2, 0,2,3 };
+        glm::mat4 projection = glm::ortho(0.0f, (float)windowWidth, 0.0f, (float)windowHeight);
+        glm::mat4 view = glm::mat4(1.0f);
+        shaderSecuenciaFinal->setMat4("projection", projection);
+        shaderSecuenciaFinal->setMat4("view", view);
+        shaderSecuenciaFinal->setBool("usarTextura", true);
 
-GLfloat verticesDecoracionEsquina[] = {
-    0.95f,  1.0f, 0.0f,    1.0f, 1.0f, 1.0f,
-    0.90f,  0.92f, 0.0f,   1.0f, 1.0f, 1.0f,
-    0.925f, 0.84f, 0.0f,   1.0f, 1.0f, 1.0f,
-    0.96f,  0.75f, 0.0f,   1.0f, 1.0f, 1.0f,
-    0.98f,  0.88f, 0.0f,   1.0f, 1.0f, 1.0f,
-    0.96f,  0.84f, 0.0f,   1.0f, 1.0f, 1.0f,
-    0.93f,  0.92f, 0.0f,   1.0f, 1.0f, 1.0f
-};
-GLuint indicesDecoracionEsquina[] = { 0,1,6, 1,6,2, 2,6,3, 3,6,5, 3,5,4 };
+        glBindVertexArray(VAO_SecuenciaFinal);
+        glActiveTexture(GL_TEXTURE0);
 
-GLfloat verticesPanelInferior[] = {
-    -0.8f, -1.0f, 0.0f,   0.16f, 0.16f, 0.16f,
-    0.8f, -1.0f, 0.0f,    0.16f, 0.16f, 0.16f,
-    -0.5f,  0.35f, 0.0f,  0.16f, 0.16f, 0.16f,
-    0.5f,  0.35f, 0.0f,   0.16f, 0.16f, 0.16f
-};
-GLuint indicesPanelInferior[] = { 0,2,3, 0,3,1 };
+        if (texturasFinalesCargadas[imagenActual]) {
+            glBindTexture(GL_TEXTURE_2D, texturasFinales[imagenActual]);
+            shaderSecuenciaFinal->setInt("textura", 0);
 
-GLfloat verticesPanelOscuro[] = {
-    -0.7f, -1.0f, 0.0f,   0.0f, 0.0f, 0.0f,
-    0.7f, -1.0f, 0.0f,    0.0f, 0.0f, 0.0f,
-    -0.45f,  0.28f, 0.0f, 0.0f, 0.0f, 0.0f,
-    0.45f,  0.28f, 0.0f,  0.0f, 0.0f, 0.0f,
-};
-GLuint indicesPanelOscuro[] = { 0,2,3, 0,3,1 };
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(windowWidth / 2.0f, windowHeight / 2.0f, 0.0f));
+            model = glm::scale(model, glm::vec3((float)windowWidth, (float)windowHeight, 1.0f));
+            shaderSecuenciaFinal->setMat4("model", model);
 
-GLfloat verticesDetalleAzul[] = {
-    -0.45f, 0.28f, 0.0f,   0.3f, 0.5f, 0.7f,
-    0.45f, 0.28f, 0.0f,    0.3f, 0.5f, 0.7f,
-    -0.488f,  0.10f, 0.0f, 0.3f, 0.5f, 0.7f,
-    0.488f,  0.10f, 0.0f,  0.3f, 0.5f, 0.7f,
-};
-GLuint indicesDetalleAzul[] = { 0,2,3, 0,3,1 };
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        }
 
-GLfloat verticesBotonIzquierdo[] = {
-    -0.40f, 0.24f, 0.0f,   0.098f, 0.098f, 0.439f,
-    -0.17f, 0.24f, 0.0f,   0.098f, 0.098f, 0.439f,
-    -0.438f, 0.13f, 0.0f,  0.098f, 0.098f, 0.439f,
-    -0.208f, 0.13f, 0.0f,  0.098f, 0.098f, 0.439f
-};
-GLuint indicesBotonIzquierdo[] = { 0,2,3, 0,3,1 };
+        glBindVertexArray(0);
+    }
 
-GLfloat verticesBotonCentro[] = {
-    -0.12f, 0.24f, 0.0f,    0.098f, 0.098f, 0.439f,
-    0.11f, 0.24f, 0.0f,     0.098f, 0.098f, 0.439f,
-    -0.158f, 0.13f, 0.0f,   0.098f, 0.098f, 0.439f,
-    0.148f, 0.13f, 0.0f,    0.098f, 0.098f, 0.439f,
-};
-GLuint indicesBotonCentro[] = { 0,2,3, 0,3,1 };
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+}
 
-GLfloat verticesBotonDerecho[] = {
-    0.16f, 0.24f, 0.0f,    0.098f, 0.098f, 0.439f,
-    0.40f, 0.24f, 0.0f,    0.098f, 0.098f, 0.439f,
-    0.198f, 0.13f, 0.0f,   0.098f, 0.098f, 0.439f,
-    0.438f, 0.13f, 0.0f,   0.098f, 0.098f, 0.439f,
-};
-GLuint indicesBotonDerecho[] = { 0,2,3, 0,3,1 };
-
-GLfloat verticesLuzCentral[] = {
-    -0.45f, -1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
-     0.45f, -1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
-    -0.10f,  0.10f, 0.0f,  1.0f, 1.0f, 1.0f,
-     0.10f,  0.10f, 0.0f,  1.0f, 1.0f, 1.0f,
-};
-GLuint indicesLuzCentral[] = { 0,2,3, 0,3,1 };
-
-// Vertices de la linterna para carga (parpadea)
-GLfloat verticesLinterna[] = {
-    0.25f, -0.3f, 0.0f,   0.4f, 0.4f, 0.4f,
-    0.05f, -0.3f, 0.0f,   0.4f, 0.4f, 0.4f,
-    -0.05f, 0.2f, 0.0f,   0.4f, 0.4f, 0.4f,
-    -0.5f, 0.2f, 0.0f,   0.4f, 0.4f, 0.4f,
-    -0.5f, -0.2f, 0.0f,   0.4f, 0.4f, 0.4f,
-    -0.05f, -0.2f, 0.0f,   0.4f, 0.4f, 0.4f,
-    0.05f, 0.3f, 0.0f,   0.4f, 0.4f, 0.4f,
-    0.25f, 0.3f, 0.0f,   0.4f, 0.4f, 0.4f,
-    0.15f, -0.2f, 0.0f,   0.9f, 0.8f, 0.2f,
-    0.25f, -0.2f, 0.0f,   0.9f, 0.8f, 0.2f,
-    0.15f,  0.2f, 0.0f,   0.9f, 0.8f, 0.2f,
-    0.25f,  0.2f, 0.0f,   0.9f, 0.8f, 0.2f,
-    0.25f, -0.2f, 0.0f,   1.0f, 0.95f, 0.7f,
-    1.0f, -0.5f, 0.0f,    1.0f, 0.95f, 0.7f,
-    0.25f,  0.2f, 0.0f,   1.0f, 0.95f, 0.7f,
-    1.0f,  0.5f, 0.0f,    1.0f, 0.95f, 0.7f,
-};
-GLuint indicesLinterna[] = {
-    0,1,2, 1,2,3, 2,3,4, 2,4,5,
-    5,6,7, 5,7,0, 2,6,7, 2,5,7,
-    8,9,10, 9,10,11,
-    12,13,14, 13,14,15
-};
-
-// Variables de renderizado 2D
-unsigned int VAO_MenuFondo, VAO_PanelIzq, VAO_PanelDer, VAO_AdornoSuperior, VAO_LineaBlanca, VAO_LineaMorada;
-unsigned int VAO_MarcoSuperior, VAO_DecoracionEsquina, VAO_PanelInferior, VAO_PanelOscuro, VAO_DetalleAzul;
-unsigned int VAO_BotonIzquierdo, VAO_BotonCentro, VAO_BotonDerecho, VAO_LuzCentral, VAO_Linterna;
-unsigned int VBO_MenuFondo, VBO_PanelIzq, VBO_PanelDer, VBO_AdornoSuperior, VBO_LineaBlanca, VBO_LineaMorada;
-unsigned int VBO_MarcoSuperior, VBO_DecoracionEsquina, VBO_PanelInferior, VBO_PanelOscuro, VBO_DetalleAzul;
-unsigned int VBO_BotonIzquierdo, VBO_BotonCentro, VBO_BotonDerecho, VBO_LuzCentral, VBO_Linterna;
-unsigned int EBO_MenuFondo, EBO_PanelIzq, EBO_PanelDer, EBO_AdornoSuperior, EBO_LineaBlanca, EBO_LineaMorada;
-unsigned int EBO_MarcoSuperior, EBO_DecoracionEsquina, EBO_PanelInferior, EBO_PanelOscuro, EBO_DetalleAzul;
-unsigned int EBO_BotonIzquierdo, EBO_BotonCentro, EBO_BotonDerecho, EBO_LuzCentral, EBO_Linterna;
-unsigned int* vbLinternaPtr = nullptr;
-
-// ==================== FUNCIONES DE COLISIÓN DE LA BODEGA ====================
-const float HABITACION_ANCHO = 20.0f;
-const float HABITACION_ALTO = 10.0f;
-const float HABITACION_PROFUNDO = 30.0f;
+// ========================================================================
 
 bool verificarColisionParedes(glm::vec3 nuevaPos) {
-    // --- ZONA NUEVA: ÁREA CON DIVISIÓN (Z de 56.0 a 74.0) ---
-    if (nuevaPos.z > 56.0f && nuevaPos.z <= 74.0f && nuevaPos.x > 9.0f) {
-        float xMin = 9.5f + RADIO_JUGADOR;
-        float xMax = 27.5f - RADIO_JUGADOR;
-        float zFin = 74.0f - RADIO_JUGADOR;
+    // ==========================================
+    // NUEVO PASILLO RECEPCIÓN
+    // ==========================================
+    if (nuevaPos.z > 74.0f && nuevaPos.z <= 114.0f) {
+        float xMin = 13.5f + RADIO_JUGADOR;
+        float xMax = 23.5f - RADIO_JUGADOR;
 
-        if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
-
-        bool enPuertaFrente = (nuevaPos.z >= zFin && nuevaPos.x > 17.4f && nuevaPos.x < 19.6f);
-        if (nuevaPos.z > zFin && !enPuertaFrente) return false;
-
-        if (nuevaPos.z > 58.0f + RADIO_JUGADOR) {
-            float paredDivX = 15.5f;
-            float margenPared = 0.05f + RADIO_JUGADOR;
-            if (nuevaPos.x > paredDivX - margenPared && nuevaPos.x < paredDivX + margenPared) {
-                return false;
+        if (nuevaPos.x < xMin || nuevaPos.x > xMax) {
+            bool enPuertaLateral = false;
+            for(int i = 0; i < 3; i++) {
+                float zPuerta = 79.0f + (i * 10.0f);
+                if (nuevaPos.z > zPuerta - 1.1f && nuevaPos.z < zPuerta + 1.1f) enPuertaLateral = true;
             }
+            if (!enPuertaLateral) return false;
         }
+
+        bool enPuertaCristal = (nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
+        if (nuevaPos.z > 114.0f - RADIO_JUGADOR && !enPuertaCristal) return false;
+
         return true;
     }
 
-    // --- ZONA 9: PASILLO FRONTAL ---
+    // 1. SALA DE RECEPCIÓN (Última sala)
+    if (nuevaPos.z > 56.0f && nuevaPos.z <= 74.0f && nuevaPos.x > 9.0f) {
+        float xMin = 9.5f + RADIO_JUGADOR;
+        float xMax = 27.5f - RADIO_JUGADOR;
+        float zMin = 56.0f + RADIO_JUGADOR;
+        float zMax = 74.0f - RADIO_JUGADOR;
+
+        if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
+        bool enPuertaFrente = (nuevaPos.x > 17.4f && nuevaPos.x < 19.6f);
+        if (nuevaPos.z > zMax && !enPuertaFrente) return false;
+        bool enPuertaAtras = (nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
+        if (nuevaPos.z < zMin && !enPuertaAtras) return false;
+        return true;
+    }
+
     if (nuevaPos.x > 27.5f) {
         float xMax = 37.5f - RADIO_JUGADOR;
         float zMin = 35.5f + RADIO_JUGADOR;
         float zMax = 38.5f - RADIO_JUGADOR;
-
         if (nuevaPos.x > xMax) return false;
         if (nuevaPos.z < zMin) return false;
         if (nuevaPos.z > zMax) return false;
-
         return true;
     }
 
-    // --- ZONA 8: PASILLO TRASERO ---
+    // 2. PASILLO ANTES DE LA RECEPCIÓN
     if (nuevaPos.z > 46.0f && nuevaPos.x > 9.5f && nuevaPos.z <= 56.0f) {
         float zMax = 56.0f - RADIO_JUGADOR;
         float xMin = 17.0f + RADIO_JUGADOR;
         float xMax = 20.0f - RADIO_JUGADOR;
-
         if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
-
-        bool enPuertaFondo = (nuevaPos.z >= zMax && nuevaPos.x > 17.4f && nuevaPos.x < 19.6f);
+        bool enPuertaFondo = (nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
         if (nuevaPos.z > zMax && !enPuertaFondo) return false;
-
         return true;
     }
 
-    // --- ZONA 7: ÁREA FINAL 2 ---
     if (nuevaPos.x > 9.5f && nuevaPos.z >= 28.0f && nuevaPos.z <= 46.0f) {
         float xMin = 9.5f + RADIO_JUGADOR;
         float xMax = 27.5f - RADIO_JUGADOR;
         float zMin = 28.0f + RADIO_JUGADOR;
         float zMax = 46.0f - RADIO_JUGADOR;
-
         bool enPuertaIzquierda = (nuevaPos.x <= xMin && nuevaPos.z > 35.5f && nuevaPos.z < 38.5f);
         bool enPuertaFrente = (nuevaPos.x >= xMax && nuevaPos.z > 35.5f && nuevaPos.z < 38.5f);
         bool enPuertaDer = (nuevaPos.z <= zMin && nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
         bool enPuertaAtras = (nuevaPos.z >= zMax && nuevaPos.x > 17.0f && nuevaPos.x < 20.0f);
-
         if (nuevaPos.x > xMax && !enPuertaFrente) return false;
         if (nuevaPos.x < xMin && !enPuertaIzquierda) return false;
         if (nuevaPos.z > zMax && !enPuertaAtras) return false;
@@ -390,52 +326,43 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
         return true;
     }
 
-    // --- ZONA 6: ÁREA FINAL 1 ---
     if (nuevaPos.z > 54.0f && nuevaPos.x <= 9.5f) {
         float xMin = -14.5f + RADIO_JUGADOR;
         float xMax = -0.5f - RADIO_JUGADOR;
         float zMin = 54.0f + RADIO_JUGADOR;
         float zMax = 68.0f - RADIO_JUGADOR;
-
         bool enPuertaAtras = (nuevaPos.z <= zMin && nuevaPos.x > -9.0f && nuevaPos.x < -6.0f);
-
         if (nuevaPos.x < xMin || nuevaPos.x > xMax) return false;
         if (nuevaPos.z > zMax) return false;
         if (nuevaPos.z < zMin && !enPuertaAtras) return false;
         return true;
     }
 
-    // --- ZONA 4: PASILLO EXTENSIÓN 1 ---
     if (nuevaPos.z > 44.0f && nuevaPos.z <= 54.0f && nuevaPos.x <= 9.5f) {
         if (nuevaPos.x < -9.0f + RADIO_JUGADOR || nuevaPos.x > -6.0f - RADIO_JUGADOR) return false;
         return true;
     }
 
-    // --- ZONA 3 Y 5: NUEVA ÁREA Y PASILLO DERECHO ---
     if (nuevaPos.z > 30.0f && nuevaPos.z <= 44.0f) {
         if (nuevaPos.x > -0.5f && nuevaPos.x <= 9.5f) {
             if (nuevaPos.z < 35.5f + RADIO_JUGADOR || nuevaPos.z > 38.5f - RADIO_JUGADOR) return false;
             return true;
         }
-
         float xMinSala = -14.5f + RADIO_JUGADOR;
         float xMaxSala = -0.5f - RADIO_JUGADOR;
         float zMaxSala = 44.0f - RADIO_JUGADOR;
-
         if (nuevaPos.x < xMinSala) return false;
         if (nuevaPos.x > xMaxSala && (nuevaPos.z < 35.5f || nuevaPos.z > 38.5f)) return false;
         if (nuevaPos.z > zMaxSala && (nuevaPos.x < -8.5f || nuevaPos.x > -6.5f)) return false;
         return true;
     }
 
-    // --- ZONA 2: PASILLO RECTO ---
     if (nuevaPos.z > 15.0f && nuevaPos.z <= 30.0f) {
         if (nuevaPos.x < -8.8f || nuevaPos.x > -6.2f) return false;
         if (nuevaPos.z > 29.5f && (nuevaPos.x < -8.5f || nuevaPos.x > -6.5f)) return false;
         return true;
     }
 
-    // --- ZONA 1: BODEGA PRINCIPAL ---
     if (nuevaPos.z >= -15.0f && nuevaPos.z <= 15.0f) {
         if (nuevaPos.x < -9.5f || nuevaPos.x > 9.5f) return false;
         if (nuevaPos.z < -14.5f) return false;
@@ -448,93 +375,156 @@ bool verificarColisionParedes(glm::vec3 nuevaPos) {
 
 void reproducirPaso() {
     if (estaCorriendo) {
-        if (pasoActual == 1) {
-            soundPaso.setBuffer(bufferPaso1);
-            pasoActual = 2;
-        } else if (pasoActual == 2) {
-            soundPaso.setBuffer(bufferPaso2);
-            pasoActual = 3;
-        } else {
-            soundPaso.setBuffer(bufferPaso3);
-            pasoActual = 1;
-        }
+        if (pasoActual == 1) { soundPaso.setBuffer(bufferPaso1); pasoActual = 2; }
+        else if (pasoActual == 2) { soundPaso.setBuffer(bufferPaso2); pasoActual = 3; }
+        else { soundPaso.setBuffer(bufferPaso3); pasoActual = 1; }
         soundPaso.setVolume(55.0f);
     } else {
-        if (pasoActual == 1) {
-            soundPaso.setBuffer(bufferPaso1);
-            pasoActual = 2;
-        } else if (pasoActual == 2) {
-            soundPaso.setBuffer(bufferPaso2);
-            pasoActual = 3;
-        } else {
-            soundPaso.setBuffer(bufferPaso3);
-            pasoActual = 1;
-        }
+        if (pasoActual == 1) { soundPaso.setBuffer(bufferPaso1); pasoActual = 2; }
+        else if (pasoActual == 2) { soundPaso.setBuffer(bufferPaso2); pasoActual = 3; }
+        else { soundPaso.setBuffer(bufferPaso3); pasoActual = 1; }
         soundPaso.setVolume(40.0f);
     }
     soundPaso.play();
 }
 
-bool eventoSalidaActivado = false;
-bool puertaBloqueada = false;
-
 bool jugadorEnZonaSalida(glm::vec3 pos) {
     return (pos.x > -9.0f && pos.x < -6.0f && pos.z > 28.0f && pos.z < 31.5f);
 }
 
-// ==================== FUNCIÓN PARA ALTERNAR PANTALLA COMPLETA ====================
-void toggleFullscreen(GLFWwindow* window) {
-    static bool isFullscreen = false;
-    static int savedX, savedY, savedW, savedH;
+// ==================== FUNCIÓN PARA RENDERIZAR OVERLAYS ====================
+void renderizarOverlay(float opacidad, glm::vec3 color) {
+    if (opacidad <= 0.0f) return;
 
-    if (isFullscreen) {
-        glfwSetWindowMonitor(window, NULL, savedX, savedY, savedW, savedH, 0);
-        isFullscreen = false;
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    overlayShader->use();
+    int colorLoc = glGetUniformLocation(overlayShader->ID, "overlayColor");
+    glUniform4f(colorLoc, color.r, color.g, color.b, opacidad);
+
+    glBindVertexArray(VAO_Overlay);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+}
+// =========================================================================
+
+// ==================== FUNCIÓN PARA ACTUALIZAR GAME OVER ====================
+void actualizarGameOver(float dt) {
+    if (!gameOverActivo) return;
+
+    tiempoGameOver += dt;
+    const float DURACION_TOTAL = 3.5f;
+    float progreso = tiempoGameOver / DURACION_TOTAL;
+
+    if (tiempoGameOver < DURACION_TOTAL) {
+        if (!visionGuardada) {
+            visionOriginal = cameraFront;
+            upOriginal = cameraUp;
+            visionGuardada = true;
+        }
+
+        if (progreso < 0.35f) {
+            float inclinacion = (progreso / 0.35f) * 120.0f;
+            glm::vec3 ejeFront = glm::normalize(visionOriginal);
+            glm::mat4 rotacion = glm::rotate(glm::mat4(1.0f), glm::radians(-inclinacion), ejeFront);
+            glm::vec3 newUp = glm::vec3(rotacion * glm::vec4(upOriginal, 0.0f));
+            cameraUp = glm::normalize(newUp);
+        }
+        else if (progreso < 0.6f) {
+            float temblor = sin(tiempoGameOver * 30.0f) * 2.0f * (1.0f - (progreso - 0.35f) / 0.25f);
+            float inclinacion = 90.0f - (progreso - 0.35f) / 0.25f * 10.0f;
+            glm::vec3 ejeFront = glm::normalize(visionOriginal);
+            glm::mat4 rotacion = glm::rotate(glm::mat4(1.0f), glm::radians(-inclinacion + temblor), ejeFront);
+            glm::vec3 newUp = glm::vec3(rotacion * glm::vec4(upOriginal, 0.0f));
+            cameraUp = glm::normalize(newUp);
+        }
+        else {
+            glm::vec3 ejeFront = glm::normalize(visionOriginal);
+            glm::mat4 rotacion = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), ejeFront);
+            glm::vec3 newUp = glm::vec3(rotacion * glm::vec4(upOriginal, 0.0f));
+            cameraUp = glm::normalize(newUp);
+        }
+
+        if (progreso < 0.5f) {
+            caidaY = (progreso / 0.5f) * 3.5f;
+            cameraPos.y = ALTURA_JUGADOR - caidaY;
+        } else {
+            cameraPos.y = ALTURA_JUGADOR - 3.5f;
+        }
+
+        if (progreso > 0.35f) {
+            sangreOpacity = ((progreso - 0.35f) / 0.5f) * 1.0f;
+            if (sangreOpacity > 1.0f) sangreOpacity = 1.0f;
+        } else {
+            sangreOpacity = 0.0f;
+        }
+
+        if (progreso > 0.85f) {
+            oscurecimientoOpacity = ((progreso - 0.85f) / 0.15f);
+            if (oscurecimientoOpacity > 1.0f) oscurecimientoOpacity = 1.0f;
+        } else {
+            oscurecimientoOpacity = 0.0f;
+        }
     } else {
-        glfwGetWindowPos(window, &savedX, &savedY);
-        glfwGetWindowSize(window, &savedW, &savedH);
-        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-        glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-        isFullscreen = true;
+        gameOverMostrandoMenu = true;
+        gameOverActivo = false;
+        cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+        std::cout << "=== MOSTRANDO MENU GAME OVER ===" << std::endl;
     }
 }
 
-// ==================== FUNCIÓN PARA REINICIAR EL JUEGO ====================
-void reiniciarJuego() {
-    if (juego3DInicializado) {
-        delete escenario;
-        delete skybox;
-        escenario = nullptr;
-        skybox = nullptr;
-        juego3DInicializado = false;
+// ==================== FUNCIÓN PARA INICIAR GAME OVER ====================
+void iniciarGameOver() {
+    if (gameOverActivo) return;
+    gameOverActivo = true;
+    gameOverMostrandoMenu = false;
+    tiempoGameOver = 0.0f;
+    sangreOpacity = 0.0f;
+    oscurecimientoOpacity = 0.0f;
+    caidaY = 0.0f;
+    visionGuardada = false;
+    juegoPausado = true;
+    if (escenario) {
+        escenario->setFlashlight(cameraPos, cameraFront, false);
     }
-    musicaFondo.stop();
-    musicaReproduciendo = false;
-    mapaObtenido = false;
-    eventoSalidaActivado = false;
-    puertaBloqueada = false;
-    juegoPausado = false;
-    if (menuMapa) {
-        menuMapa->disable();
-        menuMapa->setVisible(false);
-    }
-    cameraPos = glm::vec3(0.0f, ALTURA_JUGADOR, 7.5f);
-    yaw = -90.0f;
-    pitch = 0.0f;
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    cameraFront = glm::normalize(front);
-    firstMouse = true;
-    tiempoMensajeInicial = DURACION_MENSAJE;
-    tiempoMensajeMapaObtenido = 0.0f;
+    std::cout << "=== GAME OVER INICIADO ===" << std::endl;
 }
+// =====================================================================
 
-// ==================== PROCESAMIENTO DE INPUT ====================
 void processInput(GLFWwindow* window, float deltaTime) {
-    // ===== TECLAS QUE SIEMPRE FUNCIONAN (incluso en pausa/mapa) =====
+    // ===== SI LA SECUENCIA FINAL ESTÁ ACTIVA =====
+    if (secuenciaFinalActiva) {
+        static bool lastGState = false;
+        bool currentGState = glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
+        if (currentGState && !lastGState) {
+            static bool fullscreen = false;
+            static int savedX, savedY, savedW, savedH;
+            if (fullscreen) {
+                glfwSetWindowMonitor(window, NULL, savedX, savedY, savedW, savedH, 0);
+                fullscreen = false;
+            } else {
+                glfwGetWindowPos(window, &savedX, &savedY);
+                glfwGetWindowSize(window, &savedW, &savedH);
+                GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+                glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+                fullscreen = true;
+            }
+        }
+        lastGState = currentGState;
+        return;
+    }
+
+    if (gameOverActivo) return;
+
+    // ===== TECLA G: PANTALLA COMPLETA =====
     static bool lastGState = false;
     bool currentGState = glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS;
     if (currentGState && !lastGState) {
@@ -557,6 +547,7 @@ void processInput(GLFWwindow* window, float deltaTime) {
     }
     lastGState = currentGState;
 
+    // ===== TECLA Z: CERRAR MAPA =====
     static bool lastZState = false;
     bool currentZState = glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS;
     if (currentZState && !lastZState && menuMapa && menuMapa->isVisible()) {
@@ -573,96 +564,162 @@ void processInput(GLFWwindow* window, float deltaTime) {
         lastY = SCR_HEIGHT / 2.0f;
         firstMouse = true;
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        std::cout << "Mapa cerrado (Z)" << std::endl;
     }
     lastZState = currentZState;
 
-    if (juegoPausado || (menuMapa && menuMapa->isVisible())) {
-        return;
-    }
+    if (juegoPausado || (menuMapa && menuMapa->isVisible())) return;
 
     if (currentState == PLAY) {
         float cameraSpeed = 2.5f * deltaTime;
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-            cameraSpeed = 5.0f * deltaTime;
-        }
+        bool corriendo = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+        if (corriendo) cameraSpeed = 5.0f * deltaTime;
 
         glm::vec3 nuevaPos = cameraPos;
         bool mover = false;
 
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            glm::vec3 dir = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
-            nuevaPos += cameraSpeed * dir;
-            mover = true;
-        }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            glm::vec3 dir = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
-            nuevaPos -= cameraSpeed * dir;
-            mover = true;
-        }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            glm::vec3 derecha = glm::normalize(glm::cross(cameraFront, cameraUp));
-            glm::vec3 derechaH = glm::normalize(glm::vec3(derecha.x, 0.0f, derecha.z));
-            nuevaPos -= derechaH * cameraSpeed;
-            mover = true;
-        }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            glm::vec3 derecha = glm::normalize(glm::cross(cameraFront, cameraUp));
-            glm::vec3 derechaH = glm::normalize(glm::vec3(derecha.x, 0.0f, derecha.z));
-            nuevaPos += derechaH * cameraSpeed;
-            mover = true;
-        }
-
-        if (mover) {
-            if (verificarColisionParedes(nuevaPos) && escenario && !escenario->verificarColisionObjetos(nuevaPos, RADIO_JUGADOR)) {
-                cameraPos = nuevaPos;
-                cameraPos.y = ALTURA_JUGADOR;
-            }
-            tiempoAcumuladoPasos += deltaTime;
-            estaCorriendo = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS);
-            float intervaloActual = estaCorriendo ? 0.2f : 0.4f;
-            if (tiempoAcumuladoPasos >= intervaloActual) {
-                tiempoAcumuladoPasos = 0.0f;
-                reproducirPaso();
-            }
+        if (escenario && escenario->isJugadorAtrapado()) {
+            // El jugador está atrapado, no puede moverse
         } else {
-            tiempoAcumuladoPasos = 0.0f;
-            estaCorriendo = false;
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+                glm::vec3 dir = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
+                nuevaPos += cameraSpeed * dir;
+                mover = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+                glm::vec3 dir = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
+                nuevaPos -= cameraSpeed * dir;
+                mover = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+                glm::vec3 derecha = glm::normalize(glm::cross(cameraFront, cameraUp));
+                glm::vec3 derechaH = glm::normalize(glm::vec3(derecha.x, 0.0f, derecha.z));
+                nuevaPos -= derechaH * cameraSpeed;
+                mover = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                glm::vec3 derecha = glm::normalize(glm::cross(cameraFront, cameraUp));
+                glm::vec3 derechaH = glm::normalize(glm::vec3(derecha.x, 0.0f, derecha.z));
+                nuevaPos += derechaH * cameraSpeed;
+                mover = true;
+            }
+
+            if (mover) {
+                if (verificarColisionParedes(nuevaPos) && escenario && !escenario->verificarColisionObjetos(nuevaPos, RADIO_JUGADOR)) {
+                    cameraPos = nuevaPos;
+                    cameraPos.y = ALTURA_JUGADOR;
+                }
+                tiempoAcumuladoPasos += deltaTime;
+                estaCorriendo = corriendo;
+                float intervaloActual = estaCorriendo ? 0.2f : 0.4f;
+                if (tiempoAcumuladoPasos >= intervaloActual) {
+                    tiempoAcumuladoPasos = 0.0f;
+                    reproducirPaso();
+                }
+            } else {
+                tiempoAcumuladoPasos = 0.0f;
+                estaCorriendo = false;
+            }
         }
 
         // Tecla F: linterna
         static bool lastFState = false;
         static bool flashlightOn = true;
         bool currentFState = glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS;
-        if (currentFState && !lastFState) {
-            flashlightOn = !flashlightOn;
-        }
+        if (currentFState && !lastFState) flashlightOn = !flashlightOn;
         lastFState = currentFState;
         if (escenario) escenario->setFlashlight(cameraPos, cameraFront, flashlightOn);
 
         // Tecla E: interactuar
-        static bool ePresionada = false;
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !ePresionada) {
-            if (escenario) escenario->togglePuertaMadera(cameraPos);
-            if (escenario && escenario->jugadorCercaDePuerta(cameraPos)) {
-                escenario->togglePuerta();
-                if (sonidoCargado) soundPuerta.play();
+        if (!escenario || !escenario->isJugadorAtrapado()) {
+            static bool ePresionada = false;
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !ePresionada) {
+                // 1. NOTAS
+                if (escenario) {
+                    std::string textoNota;
+                    int idxNota = -1;
+                    if (escenario->jugadorCercaNota(cameraPos, textoNota, idxNota)) {
+                        mostrandoNota = true;
+                        notaActualTexto = textoNota;
+                        notaInteractuadaIndex = idxNota;
+                        juegoPausado = true;
+                        savedCameraFront = cameraFront;
+                        savedYaw = yaw;
+                        savedPitch = pitch;
+                        cameraStateSaved = true;
+                        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                        ePresionada = true;
+                        return;
+                    }
+                }
+
+                // 2. BOTONES DEL PUZZLE
+                if (escenario) {
+                    int idxBoton = -1;
+                    if (escenario->jugadorCercaBoton(cameraPos, idxBoton)) {
+                        if (escenario->isPuzzleResuelto() && !monstruoActivado) {
+                            glm::vec3 posBoton = escenario->getBotonPosicion(idxBoton);
+                            glm::vec3 posBotonJefe(-3.0f, -2.5f, 67.9f);
+                            if (glm::distance(posBoton, posBotonJefe) < 0.5f) {
+                                if (sonidoRugidoCargado) soundRugido.play();
+                                monstruoActivado = true;
+                                std::cout << "¡El monstruo ha sido liberado!" << std::endl;
+                            }
+                        }
+                        escenario->presionarBoton(idxBoton);
+                        if (sonidoBotonCargado) soundBoton.play();
+                        ePresionada = true;
+                        return;
+                    }
+                }
+
+                // 3. PUERTAS DE MADERA
+                if (escenario) {
+                    if (escenario->togglePuertaMadera(cameraPos)) {
+                        if (sonidoCargado) soundPuerta.play();
+                    }
+                }
+
+                // 4. PUERTA INDUSTRIAL
+                if (escenario && escenario->jugadorCercaDePuerta(cameraPos)) {
+                    escenario->togglePuerta();
+                    if (sonidoCargado) soundPuerta.play();
+                }
+
+                // 5. PALANCA
+                if (escenario && escenario->jugadorCercaPalanca(cameraPos)) {
+                    escenario->togglePalanca();
+                    if (sonidoPalancaCargado) soundPalanca.play();
+                }
+
+                // ===== 6. PUERTA DE CRISTAL (EXIT) - SECUENCIA FINAL =====
+                if (escenario) {
+                    glm::vec3 posCristal(18.5f, -1.0f, 113.95f);
+                    float distanciaCristal = glm::distance(cameraPos, posCristal);
+
+                    if (distanciaCristal < 3.0f && !secuenciaFinalActiva) {
+                        std::cout << "🚪 ¡Puerta de cristal EXIT activada! Iniciando secuencia final..." << std::endl;
+
+                        secuenciaFinalActiva = true;
+                        secuenciaFinalMostrandoImagenes = true;
+                        tiempoSecuenciaFinal = 0.0f;
+                        imagenActual = 0;
+                        secuenciaFinalTerminada = false;
+                        juegoPausado = true;
+                        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+                        if (sonidoCargado) soundPuerta.play();
+                    }
+                }
+
+                ePresionada = true;
             }
-            if (escenario && escenario->jugadorCercaPalanca(cameraPos)) {
-                escenario->togglePalanca();
-                if (sonidoPalancaCargado) soundPalanca.play();
-                if (escenario->isPalancaActivada()) std::cout << "¡Palanca activada!" << std::endl;
-            }
-            ePresionada = true;
-        }
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
-            ePresionada = false;
+            if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) ePresionada = false;
         }
 
         // Tecla M: ABRIR mapa
         static bool lastMState = false;
         bool currentMState = glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS;
-        if (currentMState && !lastMState && mapaObtenido && menuMapa && !menuMapa->isVisible() && !juegoPausado) {
+        if (currentMState && !lastMState && mapaObtenido && menuMapa && !menuMapa->isVisible() && !juegoPausado && !mostrandoNota) {
             juegoPausado = true;
             menuMapa->setVisible(true);
             savedCameraFront = cameraFront;
@@ -670,7 +727,6 @@ void processInput(GLFWwindow* window, float deltaTime) {
             savedPitch = pitch;
             cameraStateSaved = true;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-            std::cout << "Mapa abierto (M)" << std::endl;
         }
         lastMState = currentMState;
 
@@ -678,18 +734,13 @@ void processInput(GLFWwindow* window, float deltaTime) {
         static bool lastTState = false;
         bool currentTState = glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS;
         if (currentTState && !lastTState) {
-            if (musicaReproduciendo) {
-                musicaFondo.pause();
-                musicaReproduciendo = false;
-            } else {
-                musicaFondo.play();
-                musicaReproduciendo = true;
-            }
+            if (musicaReproduciendo) { musicaFondo.pause(); musicaReproduciendo = false; }
+            else { musicaFondo.play(); musicaReproduciendo = true; }
         }
         lastTState = currentTState;
     }
 
-    // ESC: manejar según el estado
+    // ESC
     static bool lastEscState = false;
     bool currentEscState = glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS;
     if (currentEscState && !lastEscState) {
@@ -701,39 +752,29 @@ void processInput(GLFWwindow* window, float deltaTime) {
             savedPitch = pitch;
             cameraStateSaved = true;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-            std::cout << "Menú de pausa abierto" << std::endl;
         }
     }
     lastEscState = currentEscState;
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
-    if (juegoPausado || currentState != PLAY) return;
+    if (juegoPausado || currentState != PLAY || gameOverActivo || secuenciaFinalActiva) return;
+
+    if (escenario && escenario->isJugadorAtrapado()) {
+        return;
+    }
 
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
-
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
+    if (firstMouse) { lastX = xpos; lastY = ypos; firstMouse = false; }
     float xoffset = xpos - lastX;
     float yoffset = lastY - ypos;
-    lastX = xpos;
-    lastY = ypos;
-
+    lastX = xpos; lastY = ypos;
     float sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw += xoffset;
-    pitch += yoffset;
-
+    xoffset *= sensitivity; yoffset *= sensitivity;
+    yaw += xoffset; pitch += yoffset;
     if (pitch > 89.0f) pitch = 89.0f;
     if (pitch < -89.0f) pitch = -89.0f;
-
     glm::vec3 front;
     front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     front.y = sin(glm::radians(pitch));
@@ -742,7 +783,12 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-    if (juegoPausado || currentState != PLAY) return;
+    if (juegoPausado || currentState != PLAY || gameOverActivo || secuenciaFinalActiva) return;
+
+    if (escenario && escenario->isJugadorAtrapado()) {
+        return;
+    }
+
     fov -= (float)yoffset;
     if (fov < 1.0f) fov = 1.0f;
     if (fov > 45.0f) fov = 45.0f;
@@ -752,37 +798,71 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-// ==================== FUNCIÓN PARA INICIALIZAR LA BODEGA ====================
 void inicializarBodega() {
-    if (juego3DInicializado) return;
+    // ===== PRIMERO LIMPIAR TODO =====
+    if (juego3DInicializado) {
+        if (escenario) {
+            delete escenario;
+            escenario = nullptr;
+        }
+        if (skybox) {
+            delete skybox;
+            skybox = nullptr;
+        }
+        juego3DInicializado = false;
+    }
 
     std::cout << "=== INICIALIZANDO BODEGA 3D ===" << std::endl;
 
+    // ===== CARGAR MÚSICA =====
     if (musicaFondo.openFromFile("sounds/Ambience/Ambient_sound.ogg")) {
         musicaFondo.setLoop(true);
         musicaFondo.setVolume(50.0f);
         musicaFondo.play();
         musicaReproduciendo = true;
-        std::cout << "Música cargada" << std::endl;
     }
 
+    // ===== CARGAR SONIDOS =====
     if (bufferPaso1.loadFromFile("sounds/SFX/Pasos_1.wav")) std::cout << "Paso 1 cargado" << std::endl;
     if (bufferPaso2.loadFromFile("sounds/SFX/Pasos_2.wav")) std::cout << "Paso 2 cargado" << std::endl;
     if (bufferPaso3.loadFromFile("sounds/SFX/Pasos_3.wav")) std::cout << "Paso 3 cargado" << std::endl;
-    if (bufferPuerta.loadFromFile("sounds/SFX/puerta.wav")) {
+    if (bufferBoton.loadFromFile("sounds/SFX/boton.wav")) {
+        soundBoton.setBuffer(bufferBoton);
+        sonidoBotonCargado = true;
+        soundBoton.setVolume(60.0f);
+    }
+    if (bufferPuertaMadera.loadFromFile("sounds/SFX/puertamadera.wav")) {
+        soundPuertaMadera.setBuffer(bufferPuertaMadera);
+        sonidoPuertaMaderaCargado = true;
+        soundPuertaMadera.setVolume(60.0f);
+    }
+    if (bufferPuerta.loadFromFile("sounds/SFX/Puerta.wav")) {
         soundPuerta.setBuffer(bufferPuerta);
         sonidoCargado = true;
         soundPuerta.setVolume(60.0f);
-        std::cout << "Sonido de puerta cargado" << std::endl;
     }
-    if (bufferPalanca.loadFromFile("sounds/SFX/palanca.wav")) {
+    if (bufferPalanca.loadFromFile("sounds/SFX/Palanca.wav")) {
         soundPalanca.setBuffer(bufferPalanca);
         sonidoPalancaCargado = true;
         soundPalanca.setVolume(60.0f);
-        std::cout << "Sonido de palanca cargado" << std::endl;
+    }
+    if (bufferMonstruo.loadFromFile("sounds/SFX/monstruo.wav")) {
+        soundMonstruo.setBuffer(bufferMonstruo);
+        sonidoMonstruoCargado = true;
+        soundMonstruo.setVolume(80.0f);
+    }
+    if (bufferRugido.loadFromFile("sounds/SFX/Rugido_monstruo.wav")) {
+        soundRugido.setBuffer(bufferRugido);
+        sonidoRugidoCargado = true;
+        soundRugido.setVolume(80.0f);
     }
 
+    // ===== CREAR ESCENARIO =====
     escenario = new Escenario();
+    escenario->inicializarMonstruo();
+    monstruoActivado = false;
+
+    // ===== CREAR SKYBOX =====
     std::vector<std::string> faces;
     faces.push_back("Textures/px.jpg");
     faces.push_back("Textures/nx.jpg");
@@ -792,6 +872,89 @@ void inicializarBodega() {
     faces.push_back("Textures/pz.jpg");
     skybox = new Skybox(faces);
 
+    // ===== REINICIAR CÁMARA =====
+    cameraPos = glm::vec3(0.0f, ALTURA_JUGADOR, 7.5f);
+    yaw = -90.0f; pitch = 0.0f;
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+    firstMouse = true;
+    juego3DInicializado = true;
+    eventoSalidaActivado = false;
+    puertaBloqueada = false;
+    mapaObtenido = false;
+    gameOverActivo = false;
+    gameOverMostrandoMenu = false;
+
+    if (menuMapa) {
+        menuMapa->disable();
+        menuMapa->setVisible(false);
+    }
+
+    tiempoMensajeInicial = DURACION_MENSAJE;
+    tiempoMensajeMapaObtenido = 0.0f;
+    juego3DInicializado = true;
+
+    std::cout << "=== BODEGA INICIALIZADA CORRECTAMENTE ===" << std::endl;
+}
+
+void reiniciarJuego() {
+    std::cout << "=== REINICIANDO JUEGO ===" << std::endl;
+
+    // ===== LIMPIAR MODELOS GLOBALES =====
+    if (modeloPalancaGlobal) {
+        delete modeloPalancaGlobal;
+        modeloPalancaGlobal = nullptr;
+        std::cout << "✅ modeloPalancaGlobal eliminado" << std::endl;
+    }
+    if (modeloPalanca2Global) {
+        delete modeloPalanca2Global;
+        modeloPalanca2Global = nullptr;
+        std::cout << "✅ modeloPalanca2Global eliminado" << std::endl;
+    }
+
+    // ===== LIMPIAR ESCENARIO Y SKYBOX =====
+    if (escenario) {
+        delete escenario;
+        escenario = nullptr;
+        std::cout << "✅ Escenario eliminado" << std::endl;
+    }
+    if (skybox) {
+        delete skybox;
+        skybox = nullptr;
+        std::cout << "✅ Skybox eliminado" << std::endl;
+    }
+    juego3DInicializado = false;
+
+    // ===== REINICIAR VARIABLES DE ESTADO =====
+    musicaFondo.stop();
+    musicaReproduciendo = false;
+    mapaObtenido = false;
+    eventoSalidaActivado = false;
+    puertaBloqueada = false;
+    juegoPausado = false;
+    monstruoActivado = false;
+
+    gameOverActivo = false;
+    gameOverMostrandoMenu = false;
+    tiempoGameOver = 0.0f;
+    sangreOpacity = 0.0f;
+    oscurecimientoOpacity = 0.0f;
+    caidaY = 0.0f;
+    visionGuardada = false;
+    visionOriginal = glm::vec3(0.0f, 0.0f, -1.0f);
+    upOriginal = glm::vec3(0.0f, 1.0f, 0.0f);
+    cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+    // ===== REINICIAR MENÚ MAPA =====
+    if (menuMapa) {
+        menuMapa->disable();
+        menuMapa->setVisible(false);
+    }
+
+    // ===== REINICIAR CÁMARA =====
     cameraPos = glm::vec3(0.0f, ALTURA_JUGADOR, 7.5f);
     yaw = -90.0f;
     pitch = 0.0f;
@@ -801,54 +964,33 @@ void inicializarBodega() {
     front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     cameraFront = glm::normalize(front);
     firstMouse = true;
-
-    juego3DInicializado = true;
-    eventoSalidaActivado = false;
-    puertaBloqueada = false;
-    mapaObtenido = false;
-    if (menuMapa) {
-        menuMapa->disable();
-        menuMapa->setVisible(false);
-    }
     tiempoMensajeInicial = DURACION_MENSAJE;
     tiempoMensajeMapaObtenido = 0.0f;
+    cameraStateSaved = false;
 
-    std::cout << "Bodega inicializada correctamente" << std::endl;
+    std::cout << "=== JUEGO REINICIADO COMPLETAMENTE ===" << std::endl;
 }
 
 int main() {
     std::cout << "=== INICIANDO KENNY'S WAREHOUSE ===" << std::endl;
-
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "UNSTABLE ANOMALY", NULL, NULL);
-    if (!window) {
-        std::cout << "ERROR: No se pudo crear la ventana" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "UNSTABLE ANOMALY", NULL, NULL);
+    if (!window) { std::cout << "ERROR: No se pudo crear la ventana" << std::endl; glfwTerminate(); return -1; }
     glfwMakeContextCurrent(window);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cout << "ERROR: No se pudo inicializar GLAD" << std::endl;
-        return -1;
-    }
-
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) { std::cout << "ERROR: No se pudo inicializar GLAD" << std::endl; return -1; }
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // ========== INICIALIZAR IMGUI ==========
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -857,270 +999,63 @@ int main() {
     ImGuiIO& io = ImGui::GetIO();
     io.FontGlobalScale = 1.6f;
 
-    // ========== CARGAR TEXTURA DEL TÍTULO ==========
-    unsigned int texturaTituloID = cargarTexturaMenu("Unstable.png");
+    unsigned int texturaTituloID = cargarTexturaMenu("Textures/Unstable.png");
     bool texturaCargada = (texturaTituloID != 0);
 
-    // ========== INICIALIZAR SHADER 2D ==========
-    Shader shaderProgram("default.vert", "default.frag");
+    texturaGameOverID = cargarTexturaMenu("Textures/craneo.jpg");
+    texturaGameOverCargada = (texturaGameOverID != 0);
+
+    Shader shaderProgram("shaders/default.vert", "shaders/default.frag");
     GLuint uniID = glGetUniformLocation(shaderProgram.ID, "scale");
 
-    // ========== CONFIGURAR TODOS LOS VAOs DEL MENU 2D ==========
-    // VAO_MenuFondo
-    glGenVertexArrays(1, &VAO_MenuFondo);
-    glGenBuffers(1, &VBO_MenuFondo);
-    glGenBuffers(1, &EBO_MenuFondo);
-    glBindVertexArray(VAO_MenuFondo);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_MenuFondo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesMenuFondo), verticesMenuFondo, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_MenuFondo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesMenuFondo), indicesMenuFondo, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    overlayShader = new Shader("overlay.vert", "overlay.frag");
+
+    float verticesOverlay[] = {
+        -1.0f, -1.0f, 0.0f,
+         1.0f, -1.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f, 0.0f
+    };
+    glGenVertexArrays(1, &VAO_Overlay);
+    glGenBuffers(1, &VBO_Overlay);
+    glBindVertexArray(VAO_Overlay);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_Overlay);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesOverlay), verticesOverlay, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+
+    // ========== VAO PARA SECUENCIA FINAL ==========
+    float verticesSecuencia[] = {
+        -0.5f, -0.5f, 0.0f,  0.0f, 0.0f,
+         0.5f, -0.5f, 0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f, 0.0f,  0.0f, 1.0f,
+         0.5f,  0.5f, 0.0f,  1.0f, 1.0f
+    };
+    glGenVertexArrays(1, &VAO_SecuenciaFinal);
+    glGenBuffers(1, &VBO_SecuenciaFinal);
+    glBindVertexArray(VAO_SecuenciaFinal);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_SecuenciaFinal);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesSecuencia), verticesSecuencia, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);
 
-    // VAO_PanelIzq
-    glGenVertexArrays(1, &VAO_PanelIzq);
-    glGenBuffers(1, &VBO_PanelIzq);
-    glGenBuffers(1, &EBO_PanelIzq);
-    glBindVertexArray(VAO_PanelIzq);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_PanelIzq);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesPanelIzq), verticesPanelIzq, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_PanelIzq);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesPanelIzq), indicesPanelIzq, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
+    // ===== CARGAR TEXTURAS DE LA SECUENCIA FINAL =====
+    cargarTexturasSecuenciaFinal();
 
-    // VAO_PanelDer
-    glGenVertexArrays(1, &VAO_PanelDer);
-    glGenBuffers(1, &VBO_PanelDer);
-    glGenBuffers(1, &EBO_PanelDer);
-    glBindVertexArray(VAO_PanelDer);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_PanelDer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesPanelDer), verticesPanelDer, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_PanelDer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesPanelDer), indicesPanelDer, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
+    inicializarMenu2D(shaderProgram);
 
-    // VAO_AdornoSuperior
-    glGenVertexArrays(1, &VAO_AdornoSuperior);
-    glGenBuffers(1, &VBO_AdornoSuperior);
-    glGenBuffers(1, &EBO_AdornoSuperior);
-    glBindVertexArray(VAO_AdornoSuperior);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_AdornoSuperior);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesAdornoSuperior), verticesAdornoSuperior, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_AdornoSuperior);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesAdornoSuperior), indicesAdornoSuperior, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_LineaBlanca
-    glGenVertexArrays(1, &VAO_LineaBlanca);
-    glGenBuffers(1, &VBO_LineaBlanca);
-    glGenBuffers(1, &EBO_LineaBlanca);
-    glBindVertexArray(VAO_LineaBlanca);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_LineaBlanca);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesLineaBlanca), verticesLineaBlanca, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_LineaBlanca);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesLineaBlanca), indicesLineaBlanca, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_LineaMorada
-    glGenVertexArrays(1, &VAO_LineaMorada);
-    glGenBuffers(1, &VBO_LineaMorada);
-    glGenBuffers(1, &EBO_LineaMorada);
-    glBindVertexArray(VAO_LineaMorada);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_LineaMorada);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesLineaMorada), verticesLineaMorada, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_LineaMorada);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesLineaMorada), indicesLineaMorada, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_MarcoSuperior
-    glGenVertexArrays(1, &VAO_MarcoSuperior);
-    glGenBuffers(1, &VBO_MarcoSuperior);
-    glGenBuffers(1, &EBO_MarcoSuperior);
-    glBindVertexArray(VAO_MarcoSuperior);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_MarcoSuperior);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesMarcoSuperior), verticesMarcoSuperior, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_MarcoSuperior);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesMarcoSuperior), indicesMarcoSuperior, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_DecoracionEsquina
-    glGenVertexArrays(1, &VAO_DecoracionEsquina);
-    glGenBuffers(1, &VBO_DecoracionEsquina);
-    glGenBuffers(1, &EBO_DecoracionEsquina);
-    glBindVertexArray(VAO_DecoracionEsquina);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_DecoracionEsquina);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesDecoracionEsquina), verticesDecoracionEsquina, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_DecoracionEsquina);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesDecoracionEsquina), indicesDecoracionEsquina, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_PanelInferior
-    glGenVertexArrays(1, &VAO_PanelInferior);
-    glGenBuffers(1, &VBO_PanelInferior);
-    glGenBuffers(1, &EBO_PanelInferior);
-    glBindVertexArray(VAO_PanelInferior);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_PanelInferior);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesPanelInferior), verticesPanelInferior, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_PanelInferior);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesPanelInferior), indicesPanelInferior, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_PanelOscuro
-    glGenVertexArrays(1, &VAO_PanelOscuro);
-    glGenBuffers(1, &VBO_PanelOscuro);
-    glGenBuffers(1, &EBO_PanelOscuro);
-    glBindVertexArray(VAO_PanelOscuro);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_PanelOscuro);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesPanelOscuro), verticesPanelOscuro, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_PanelOscuro);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesPanelOscuro), indicesPanelOscuro, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_DetalleAzul
-    glGenVertexArrays(1, &VAO_DetalleAzul);
-    glGenBuffers(1, &VBO_DetalleAzul);
-    glGenBuffers(1, &EBO_DetalleAzul);
-    glBindVertexArray(VAO_DetalleAzul);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_DetalleAzul);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesDetalleAzul), verticesDetalleAzul, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_DetalleAzul);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesDetalleAzul), indicesDetalleAzul, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_BotonIzquierdo
-    glGenVertexArrays(1, &VAO_BotonIzquierdo);
-    glGenBuffers(1, &VBO_BotonIzquierdo);
-    glGenBuffers(1, &EBO_BotonIzquierdo);
-    glBindVertexArray(VAO_BotonIzquierdo);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_BotonIzquierdo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesBotonIzquierdo), verticesBotonIzquierdo, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_BotonIzquierdo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesBotonIzquierdo), indicesBotonIzquierdo, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_BotonCentro
-    glGenVertexArrays(1, &VAO_BotonCentro);
-    glGenBuffers(1, &VBO_BotonCentro);
-    glGenBuffers(1, &EBO_BotonCentro);
-    glBindVertexArray(VAO_BotonCentro);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_BotonCentro);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesBotonCentro), verticesBotonCentro, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_BotonCentro);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesBotonCentro), indicesBotonCentro, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_BotonDerecho
-    glGenVertexArrays(1, &VAO_BotonDerecho);
-    glGenBuffers(1, &VBO_BotonDerecho);
-    glGenBuffers(1, &EBO_BotonDerecho);
-    glBindVertexArray(VAO_BotonDerecho);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_BotonDerecho);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesBotonDerecho), verticesBotonDerecho, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_BotonDerecho);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesBotonDerecho), indicesBotonDerecho, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_LuzCentral
-    glGenVertexArrays(1, &VAO_LuzCentral);
-    glGenBuffers(1, &VBO_LuzCentral);
-    glGenBuffers(1, &EBO_LuzCentral);
-    glBindVertexArray(VAO_LuzCentral);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_LuzCentral);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesLuzCentral), verticesLuzCentral, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_LuzCentral);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesLuzCentral), indicesLuzCentral, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    // VAO_Linterna
-    glGenVertexArrays(1, &VAO_Linterna);
-    glGenBuffers(1, &VBO_Linterna);
-    glGenBuffers(1, &EBO_Linterna);
-    glBindVertexArray(VAO_Linterna);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_Linterna);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesLinterna), verticesLinterna, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_Linterna);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesLinterna), indicesLinterna, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-
-    vbLinternaPtr = &VBO_Linterna;
-
-    // ========== INICIALIZAR MENÚ DEL MAPA ==========
     menuMapa = new Menu();
-    if (!menuMapa->loadTexture("Textures/mapa.png")) {
-        std::cout << "Advertencia: No se pudo cargar la textura del mapa" << std::endl;
-    }
+    if (!menuMapa->loadTexture("Textures/mapa.jpg")) std::cout << "Advertencia: No se pudo cargar la textura del mapa" << std::endl;
     menuMapa->disable();
     menuMapa->setVisible(false);
 
-    // Inicializar timers
     lastFrame = 0.0f;
     tiempoMensajeInicial = DURACION_MENSAJE;
 
-    // ========== BUCLE PRINCIPAL ==========
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -1139,61 +1074,51 @@ int main() {
         }
 
         if (currentState == PLAY) {
-            if (tiempoMensajeInicial > 0.0f) {
-                tiempoMensajeInicial -= deltaTime;
-                if (tiempoMensajeInicial < 0.0f) tiempoMensajeInicial = 0.0f;
-            }
-            if (tiempoMensajeMapaObtenido > 0.0f) {
-                tiempoMensajeMapaObtenido -= deltaTime;
-                if (tiempoMensajeMapaObtenido < 0.0f) tiempoMensajeMapaObtenido = 0.0f;
-            }
+            if (tiempoMensajeInicial > 0.0f) { tiempoMensajeInicial -= deltaTime; if (tiempoMensajeInicial < 0.0f) tiempoMensajeInicial = 0.0f; }
+            if (tiempoMensajeMapaObtenido > 0.0f) { tiempoMensajeMapaObtenido -= deltaTime; if (tiempoMensajeMapaObtenido < 0.0f) tiempoMensajeMapaObtenido = 0.0f; }
         }
 
-        // Parpadeo de la luz central (solo en menús 2D)
-        if (currentState != PLAY && currentState != LOADING && currentState != PAUSE_MENU && currentState != MANUAL_FROM_PAUSE) {
-            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastBlinkTime);
-            if (elapsed.count() >= 1000) {
-                luzBlancaEncendida = !luzBlancaEncendida;
-                lastBlinkTime = now;
-                float colorValue = luzBlancaEncendida ? 1.0f : 0.0f;
-                GLfloat nuevosColores[] = {
-                    -0.45f, -1.0f, 0.0f,   colorValue, colorValue, colorValue,
-                     0.45f, -1.0f, 0.0f,   colorValue, colorValue, colorValue,
-                    -0.10f,  0.10f, 0.0f,  colorValue, colorValue, colorValue,
-                     0.10f,  0.10f, 0.0f,  colorValue, colorValue, colorValue,
-                };
-                glBindBuffer(GL_ARRAY_BUFFER, VBO_LuzCentral);
-                glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(nuevosColores), nuevosColores);
-            }
+        if (gameOverActivo) {
+            actualizarGameOver(deltaTime);
         }
 
-        // Lógica de la pantalla de LOADING
-        if (currentState == LOADING) {
-            auto puntoElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastPuntoTime);
-            if (puntoElapsed.count() >= 500) {
-                puntosIndex = (puntosIndex + 1) % 4;
-                lastPuntoTime = now;
-            }
-            auto luzBlinkElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLuzBlink);
-            if (luzBlinkElapsed.count() >= 300) {
-                luzBlancoAmarillentoEncendida = !luzBlancoAmarillentoEncendida;
-                lastLuzBlink = now;
-                if (vbLinternaPtr) {
-                    glBindBuffer(GL_ARRAY_BUFFER, *vbLinternaPtr);
-                    if (luzBlancoAmarillentoEncendida) {
-                        verticesLinterna[12*6 + 3] = 1.0f; verticesLinterna[12*6 + 4] = 0.95f; verticesLinterna[12*6 + 5] = 0.7f;
-                        verticesLinterna[13*6 + 3] = 1.0f; verticesLinterna[13*6 + 4] = 0.95f; verticesLinterna[13*6 + 5] = 0.7f;
-                        verticesLinterna[14*6 + 3] = 1.0f; verticesLinterna[14*6 + 4] = 0.95f; verticesLinterna[14*6 + 5] = 0.7f;
-                        verticesLinterna[15*6 + 3] = 1.0f; verticesLinterna[15*6 + 4] = 0.95f; verticesLinterna[15*6 + 5] = 0.7f;
+        // ==================== ACTUALIZAR SECUENCIA FINAL ====================
+        if (secuenciaFinalActiva) {
+            tiempoSecuenciaFinal += deltaTime;
+
+            if (secuenciaFinalMostrandoImagenes) {
+                if (tiempoSecuenciaFinal >= DURACION_IMAGEN) {
+                    tiempoSecuenciaFinal = 0.0f;
+                    imagenActual++;
+                    if (imagenActual >= TOTAL_IMAGENES) {
+                        secuenciaFinalActiva = false;
+                        secuenciaFinalMostrandoImagenes = false;
+                        secuenciaFinalTerminada = true;
+                        std::cout << "🏠 Secuencia final terminada, volviendo al menú principal..." << std::endl;
+
+                        reiniciarJuego();
+                        gameOverMostrandoMenu = false;
+                        currentState = MENU_PRINCIPAL;
+                        manualVisto = true;
+                        juegoPausado = false;
+                        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                     } else {
-                        verticesLinterna[12*6 + 3] = 0.0f; verticesLinterna[12*6 + 4] = 0.0f; verticesLinterna[12*6 + 5] = 0.0f;
-                        verticesLinterna[13*6 + 3] = 0.0f; verticesLinterna[13*6 + 4] = 0.0f; verticesLinterna[13*6 + 5] = 0.0f;
-                        verticesLinterna[14*6 + 3] = 0.0f; verticesLinterna[14*6 + 4] = 0.0f; verticesLinterna[14*6 + 5] = 0.0f;
-                        verticesLinterna[15*6 + 3] = 0.0f; verticesLinterna[15*6 + 4] = 0.0f; verticesLinterna[15*6 + 5] = 0.0f;
+                        std::cout << "📸 Mostrando imagen " << imagenActual + 1 << "/" << TOTAL_IMAGENES << std::endl;
                     }
-                    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verticesLinterna), verticesLinterna);
                 }
             }
+        }
+        // ================================================================
+
+        if (currentState != PLAY && currentState != LOADING && currentState != PAUSE_MENU && currentState != MANUAL_FROM_PAUSE) {
+            actualizarParpadeoLuzCentral();
+        }
+
+        if (currentState == LOADING) {
+            auto puntoElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastPuntoTime);
+            if (puntoElapsed.count() >= 500) { puntosIndex = (puntosIndex + 1) % 4; lastPuntoTime = now; }
+            auto luzBlinkElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLuzBlink);
+            if (luzBlinkElapsed.count() >= 300) { luzBlancoAmarillentoEncendida = !luzBlancoAmarillentoEncendida; lastLuzBlink = now; actualizarParpadeoLinternaCarga(); }
             auto loadingElapsed = std::chrono::duration_cast<std::chrono::seconds>(now - loadingStartTime);
             if (loadingElapsed.count() >= 8) {
                 currentState = PLAY;
@@ -1206,237 +1131,235 @@ int main() {
             }
         }
 
-        // Actualizar escenario 3D (solo en PLAY y no en pausa)
-        if (currentState == PLAY && juego3DInicializado && escenario && !juegoPausado && !menuMapa->isVisible()) {
-            escenario->update(deltaTime);
-            processInput(window, deltaTime);
+        if (currentState == PLAY && juego3DInicializado && escenario && skybox && !juegoPausado && !menuMapa->isVisible() && !gameOverActivo && !secuenciaFinalActiva) {
+            // Asegurar que escenario existe antes de usarlo
+            if (escenario) {
+                escenario->update(deltaTime);
 
-            if (!eventoSalidaActivado && jugadorEnZonaSalida(cameraPos)) {
-                eventoSalidaActivado = true;
-                puertaBloqueada = true;
-                if (escenario->isPuertaAbierta()) {
-                    escenario->togglePuerta();
+                if (escenario->isMonstruoActivo()) {
+                    escenario->actualizarMonstruo(deltaTime, cameraPos);
                 }
-                std::cout << "\n=== EVENTO ACTIVADO: puerta bloqueada ===" << std::endl;
-            }
 
-            // Detectar recolección del mapa
-            if (!mapaObtenido) {
-                glm::vec3 posicionMapa = glm::vec3(-3.0f, -1.0f, 14.7f);
-                float distanciaAlMapa = glm::distance(cameraPos, posicionMapa);
-                if (distanciaAlMapa < 3.0f) {
-                    static bool eMapaPresionada = false;
-                    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !eMapaPresionada) {
-                        mapaObtenido = true;
-                        menuMapa->enable();
-                        tiempoMensajeMapaObtenido = DURACION_MENSAJE;
-                        if (tiempoMensajeInicial > 0) tiempoMensajeInicial = 0.0f;
-                        std::cout << "\n=== ¡HAS OBTENIDO EL MAPA! ===" << std::endl;
-                        eMapaPresionada = true;
+                if (escenario->isJugadorAtrapado()) {
+                    if (!gameOverActivo && !gameOverMostrandoMenu) {
+                        std::cout << "¡El monstruo atrapó al jugador! Iniciando Game Over..." << std::endl;
+                        iniciarGameOver();
                     }
-                    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
-                        eMapaPresionada = false;
+                }
+
+                processInput(window, deltaTime);
+                if (!eventoSalidaActivado && jugadorEnZonaSalida(cameraPos)) {
+                    eventoSalidaActivado = true;
+                    puertaBloqueada = true;
+                    if (escenario->isPuertaAbierta()) escenario->togglePuerta();
+                }
+                if (!mapaObtenido) {
+                    glm::vec3 posicionMapa = glm::vec3(-3.0f, -1.0f, 14.7f);
+                    float distanciaAlMapa = glm::distance(cameraPos, posicionMapa);
+                    if (distanciaAlMapa < 3.0f) {
+                        static bool eMapaPresionada = false;
+                        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !eMapaPresionada) {
+                            mapaObtenido = true;
+                            menuMapa->enable();
+                            tiempoMensajeMapaObtenido = DURACION_MENSAJE;
+                            if (tiempoMensajeInicial > 0) tiempoMensajeInicial = 0.0f;
+                            eMapaPresionada = true;
+                        }
+                        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) eMapaPresionada = false;
                     }
                 }
             }
         } else if (currentState != PLAY && !juego3DInicializado) {
             processInput(window, deltaTime);
         } else if (currentState == PLAY && juego3DInicializado && (juegoPausado || menuMapa->isVisible())) {
-            // En pausa o mapa visible, no actualizar escenario pero sí procesar input básico
             processInput(window, deltaTime);
         } else {
             processInput(window, deltaTime);
         }
 
-        // Limpiar pantalla
-        if (currentState == LOADING) {
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        } else if ((currentState == PLAY || currentState == PAUSE_MENU || currentState == MANUAL_FROM_PAUSE) && juego3DInicializado) {
-            glClearColor(0.03f, 0.03f, 0.05f, 1.0f);
-        } else {
-            glClearColor(0.04f, 0.08f, 0.17f, 1.0f);
-        }
+        if (currentState == LOADING) glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        else if ((currentState == PLAY || currentState == PAUSE_MENU || currentState == MANUAL_FROM_PAUSE) && juego3DInicializado) glClearColor(0.03f, 0.03f, 0.05f, 1.0f);
+        else glClearColor(0.04f, 0.08f, 0.17f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // ========== RENDERIZADO 3D ==========
-        // Dibujar el escenario 3D en TODOS los estados donde el juego está inicializado
-        if (juego3DInicializado && escenario && skybox) {
-            // Asegurar estado OpenGL correcto para 3D
+        // ===== RENDERIZAR JUEGO NORMAL O SECUENCIA FINAL =====
+        if (secuenciaFinalActiva) {
+            renderizarSecuenciaFinal(windowWidth, windowHeight);
+        } else if (juego3DInicializado && escenario && skybox && !gameOverActivo && !gameOverMostrandoMenu) {
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_CULL_FACE);
             glCullFace(GL_BACK);
-
             glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
             glm::mat4 projection = glm::perspective(glm::radians(fov), (float)windowWidth / (float)windowHeight, 0.1f, 100.0f);
             skybox->render(view, projection);
-
-            // Congelar animaciones en menús (tiempo = 0) para que no se vean movimientos extraños
             float tiempoAnimacion = (currentState == PLAY && !juegoPausado && !menuMapa->isVisible()) ? (float)glfwGetTime() : 0.0f;
             escenario->render(view, projection, cameraPos, tiempoAnimacion);
         }
 
-        // ========== RENDERIZADO 2D (menús geométricos) ==========
-        // Solo se dibujan en LOADING y MENU_PRINCIPAL/MANUAL/CREDITS
-        if (currentState == LOADING || currentState == MENU_PRINCIPAL || currentState == MANUAL || currentState == CREDITS) {
-            glDisable(GL_DEPTH_TEST);
-            glDisable(GL_CULL_FACE);
-
-            shaderProgram.use();
-
-            if (currentState == LOADING) {
-                glUniform1f(uniID, 2.2f);
-                glBindVertexArray(VAO_Linterna);
-                glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-            }
-            else if (currentState == MENU_PRINCIPAL || currentState == MANUAL || currentState == CREDITS) {
-                glUniform1f(uniID, 1.0f);
-                glBindVertexArray(VAO_PanelIzq); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_PanelDer); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_LineaBlanca); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_LineaMorada); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_AdornoSuperior); glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_MenuFondo); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_MarcoSuperior); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_DecoracionEsquina); glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_PanelInferior); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_PanelOscuro); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_DetalleAzul); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_BotonIzquierdo); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_BotonCentro); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_BotonDerecho); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                glBindVertexArray(VAO_LuzCentral); glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-            }
-
-            glEnable(GL_CULL_FACE);
-            glEnable(GL_DEPTH_TEST);
+        if (gameOverActivo) {
+            renderizarOverlay(sangreOpacity, glm::vec3(0.6f, 0.0f, 0.0f));
+            renderizarOverlay(oscurecimientoOpacity, glm::vec3(0.0f, 0.0f, 0.0f));
         }
 
-        // ========== IMGUI - MENÚS ==========
+        if (currentState == LOADING || currentState == MENU_PRINCIPAL || currentState == MANUAL || currentState == CREDITS) {
+            dibujarMenu2D(shaderProgram, uniID, windowWidth, windowHeight, std::min(1.0f, std::max(0.8f, (float)windowWidth / 1280.0f)));
+        }
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         float escalaImGui = std::min(1.0f, std::max(0.8f, (float)windowWidth / 1280.0f));
         ImGui::GetIO().FontGlobalScale = 1.6f * escalaImGui;
-
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20 * escalaImGui, 15 * escalaImGui));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10 * escalaImGui, 15 * escalaImGui));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(25 * escalaImGui, 25 * escalaImGui));
         ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarRounding, 0.0f);
-
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.05f, 0.15f, 0.35f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.25f, 0.55f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.02f, 0.1f, 0.25f, 1.0f));
 
-        // ========== MENÚ PRINCIPAL ==========
-        if (currentState == MENU_PRINCIPAL) {
+        // Mostrar ventana de nota si corresponde
+        if (mostrandoNota && !secuenciaFinalActiva) {
+            ImGui::SetNextWindowSize(ImVec2(550, 350), ImGuiCond_Always);
+            ImGui::SetNextWindowPos(ImVec2(windowWidth / 2 - 275, windowHeight / 2 - 175), ImGuiCond_Always);
+            ImGui::Begin("Note", &mostrandoNota, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);  // Cambiado de "Nota" a "Note"
+            ImGui::PushTextWrapPos(ImGui::GetWindowSize().x - 30);
+            ImGui::TextWrapped("%s", notaActualTexto.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::Separator();
+            if (ImGui::Button("Close", ImVec2(120, 40))) {  // Cambiado de "Cerrar" a "Close"
+                mostrandoNota = false;
+                juegoPausado = false;
+                if (escenario && notaInteractuadaIndex != -1) {
+                    escenario->marcarNotaLeida(notaInteractuadaIndex);
+                    notaInteractuadaIndex = -1;
+                }
+                if (cameraStateSaved) {
+                    cameraFront = savedCameraFront;
+                    yaw = savedYaw;
+                    pitch = savedPitch;
+                    cameraStateSaved = false;
+                }
+                glfwSetCursorPos(window, SCR_WIDTH / 2, SCR_HEIGHT / 2);
+                lastX = SCR_WIDTH / 2;
+                lastY = SCR_HEIGHT / 2;
+                firstMouse = true;
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            }
+            ImGui::End();
+        }
+
+        // ==================== MENU GAME OVER ====================
+        if (gameOverMostrandoMenu && !secuenciaFinalActiva) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+            float gameOverAncho = 800 * escalaImGui;
+            ImGui::SetNextWindowPos(ImVec2(windowWidth / 2, windowHeight / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowSize(ImVec2(gameOverAncho, 700 * escalaImGui));
+            ImGui::SetNextWindowBgAlpha(0.95f);
+            ImGui::Begin("Game Over", NULL,
+                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+            ImGui::SetCursorPosX((gameOverAncho - ImGui::CalcTextSize("GAME OVER                   ").x) / 2);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.1f, 0.1f, 1.0f));
+            ImGui::SetWindowFontScale(3.5f * escalaImGui);
+            ImGui::Text("GAME OVER");
+            ImGui::PopStyleColor();
+            ImGui::SetWindowFontScale(1.1f * escalaImGui);
+            ImGui::Dummy(ImVec2(0.0f, 30 * escalaImGui));
+
+            if (texturaGameOverCargada && texturaGameOverID != 0) {
+                float imageSize = 350 * escalaImGui;
+                ImGui::SetCursorPosX((gameOverAncho - imageSize) / 2);
+                ImGui::Image((void*)(intptr_t)texturaGameOverID, ImVec2(imageSize, imageSize));
+            }
+
+            ImGui::Dummy(ImVec2(0.0f, 40 * escalaImGui));
+
+            // Botón único centrado - más ancho y con texto "Main Menu"
+            float botonAncho = 400 * escalaImGui;
+            float botonAlto = 80 * escalaImGui;
+            ImGui::SetCursorPosX((gameOverAncho - botonAncho) / 2);
+
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.2f, 0.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.3f, 0.3f, 1.0f));
+            if (ImGui::Button("MAIN MENU", ImVec2(botonAncho, botonAlto))) {
+                reiniciarJuego();
+                gameOverMostrandoMenu = false;
+                currentState = MENU_PRINCIPAL;
+                juegoPausado = false;
+                manualVisto = true;
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                std::cout << "Volviendo al menú principal desde Game Over..." << std::endl;
+            }
+            ImGui::PopStyleColor(2);
+
+            ImGui::End();
+        }
+        // ========================================================
+
+        // MENÚ PRINCIPAL
+        if (currentState == MENU_PRINCIPAL && !secuenciaFinalActiva) {
             float menuAncho = 500 * escalaImGui;
             ImGui::SetNextWindowPos(ImVec2(50, windowHeight / 2 - 30 * escalaImGui), ImGuiCond_Always, ImVec2(0.0f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(menuAncho, 700 * escalaImGui));
             ImGui::SetNextWindowBgAlpha(0.0f);
-            ImGui::Begin("Menu Principal", NULL,
-                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar);
-
+            ImGui::Begin("Main Menu", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar);
             float anchoTextura = 430 * escalaImGui;
             float altoTextura = 190 * escalaImGui;
             ImGui::SetCursorPosX((menuAncho - anchoTextura) / 2);
-            if (texturaCargada && texturaTituloID != 0) {
-                ImGui::Image((void*)(intptr_t)texturaTituloID, ImVec2(anchoTextura, altoTextura));
-            } else {
-                ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                ImVec2 p_min = ImGui::GetCursorScreenPos();
-                ImVec2 p_max = ImVec2(p_min.x + anchoTextura, p_min.y + altoTextura);
-                draw_list->AddRectFilled(p_min, p_max, IM_COL32(255, 255, 255, 255));
-                ImGui::Dummy(ImVec2(anchoTextura, altoTextura));
-                ImVec2 textSize = ImGui::CalcTextSize("UNSTABLE ANCHOR");
-                ImGui::SetCursorPosX((menuAncho - textSize.x) / 2);
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 85 * escalaImGui);
-                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-                ImGui::Text("UNSTABLE ANCHOR");
-                ImGui::PopStyleColor();
-            }
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            if (texturaCargada && texturaTituloID != 0) ImGui::Image((void*)(intptr_t)texturaTituloID, ImVec2(anchoTextura, altoTextura));
+            else { ImGui::Dummy(ImVec2(anchoTextura, altoTextura)); ImVec2 textSize = ImGui::CalcTextSize("UNSTABLE ANCHOR"); ImGui::SetCursorPosX((menuAncho - textSize.x) / 2); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 85 * escalaImGui); ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f)); ImGui::Text("UNSTABLE ANCHOR"); ImGui::PopStyleColor(); }
+            ImGui::Spacing(); ImGui::Spacing();
             float botonAncho = 410 * escalaImGui;
             float botonAlto = 75 * escalaImGui;
-
             if (!manualVisto) {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.35f, 0.35f, 1.0f));
                 ImGui::SetCursorPosX((menuAncho - botonAncho) / 2);
-                if (ImGui::Button("PLAY", ImVec2(botonAncho, botonAlto))) {
-                    tiempoMensajeBloqueo = DURACION_MENSAJE_BLOQUEO;
-                }
+                if (ImGui::Button("PLAY", ImVec2(botonAncho, botonAlto))) tiempoMensajeBloqueo = DURACION_MENSAJE_BLOQUEO;
                 ImGui::PopStyleColor();
             } else {
                 ImGui::SetCursorPosX((menuAncho - botonAncho) / 2);
-                if (ImGui::Button("PLAY", ImVec2(botonAncho, botonAlto))) {
-                    currentState = LOADING;
-                    loadingStartTime = std::chrono::steady_clock::now();
-                    puntosIndex = 0;
-                    luzBlancoAmarillentoEncendida = true;
-                    if (vbLinternaPtr) {
-                        glBindBuffer(GL_ARRAY_BUFFER, *vbLinternaPtr);
-                        verticesLinterna[12*6 + 3] = 1.0f; verticesLinterna[12*6 + 4] = 0.95f; verticesLinterna[12*6 + 5] = 0.7f;
-                        verticesLinterna[13*6 + 3] = 1.0f; verticesLinterna[13*6 + 4] = 0.95f; verticesLinterna[13*6 + 5] = 0.7f;
-                        verticesLinterna[14*6 + 3] = 1.0f; verticesLinterna[14*6 + 4] = 0.95f; verticesLinterna[14*6 + 5] = 0.7f;
-                        verticesLinterna[15*6 + 3] = 1.0f; verticesLinterna[15*6 + 4] = 0.95f; verticesLinterna[15*6 + 5] = 0.7f;
-                        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verticesLinterna), verticesLinterna);
-                    }
-                }
+                if (ImGui::Button("PLAY", ImVec2(botonAncho, botonAlto))) { currentState = LOADING; loadingStartTime = std::chrono::steady_clock::now(); puntosIndex = 0; luzBlancoAmarillentoEncendida = true; resetearColoresLinterna(); }
             }
-
             ImGui::Spacing();
             ImGui::SetCursorPosX((menuAncho - botonAncho) / 2);
-            if (ImGui::Button("MANUAL", ImVec2(botonAncho, botonAlto))) {
-                currentState = MANUAL;
-            }
-
+            if (ImGui::Button("MANUAL", ImVec2(botonAncho, botonAlto))) currentState = MANUAL;
             ImGui::Spacing();
             ImGui::SetCursorPosX((menuAncho - botonAncho) / 2);
-            if (ImGui::Button("CREDITS", ImVec2(botonAncho, botonAlto))) {
-                currentState = CREDITS;
-            }
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            if (ImGui::Button("CREDITS", ImVec2(botonAncho, botonAlto))) currentState = CREDITS;
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.15f, 0.15f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.75f, 0.25f, 0.25f, 1.0f));
             ImGui::SetCursorPosX((menuAncho - botonAncho) / 2);
-            if (ImGui::Button("QUIT", ImVec2(botonAncho, botonAlto))) {
-                glfwSetWindowShouldClose(window, true);
-            }
+            if (ImGui::Button("QUIT", ImVec2(botonAncho, botonAlto))) glfwSetWindowShouldClose(window, true);
             ImGui::PopStyleColor(2);
             ImGui::End();
-
             if (tiempoMensajeBloqueo > 0.0f) {
                 ImGui::SetNextWindowPos(ImVec2(windowWidth / 2, windowHeight / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
                 ImGui::SetNextWindowSize(ImVec2(500 * escalaImGui, 140 * escalaImGui));
                 ImGui::SetNextWindowBgAlpha(0.95f);
-                ImGui::Begin("Mensaje", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+                ImGui::Begin("Message", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
                 ImGui::SetCursorPosY(35 * escalaImGui);
-                ImGui::SetCursorPosX((500 * escalaImGui - ImGui::CalcTextSize("Para desbloquear PLAY,").x) * 0.5f);
+                ImGui::SetCursorPosX((500 * escalaImGui - ImGui::CalcTextSize("To unlock PLAY,").x) * 0.5f);
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.2f, 1.0f));
-                ImGui::Text("Para desbloquear PLAY,");
-                ImGui::SetCursorPosX((500 * escalaImGui - ImGui::CalcTextSize("vea el MANUAL primero").x) * 0.5f);
+                ImGui::Text("To unlock PLAY,");
+                ImGui::SetCursorPosX((500 * escalaImGui - ImGui::CalcTextSize("Read the MANUAL first").x) * 0.5f);
                 ImGui::SetCursorPosY(75 * escalaImGui);
-                ImGui::Text("vea el MANUAL primero");
+                ImGui::Text("Read the MANUAL first");
                 ImGui::PopStyleColor();
                 ImGui::End();
             }
         }
-        // ========== PANTALLA DE CARGA ==========
-        else if (currentState == LOADING) {
+        // PANTALLA DE CARGA
+        else if (currentState == LOADING && !secuenciaFinalActiva) {
             ImGui::SetNextWindowPos(ImVec2(0, windowHeight - 150));
             ImGui::SetNextWindowSize(ImVec2(windowWidth, 100));
             ImGui::SetNextWindowBgAlpha(0.0f);
-            ImGui::Begin("Texto Carga", NULL,
-                ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
-            std::string textoBase = "Cargando";
+            ImGui::Begin("Loading Text", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
+            std::string textoBase = "Loading";
             std::string puntos = "";
             for (int i = 0; i < puntosIndex; i++) puntos += ".";
             std::string textoCompleto = textoBase + puntos;
@@ -1446,43 +1369,35 @@ int main() {
             ImGui::Text("%s", textoCompleto.c_str());
             ImGui::End();
         }
-        // ========== MANUAL ==========
-        else if (currentState == MANUAL) {
+        // MANUAL
+        else if (currentState == MANUAL && !secuenciaFinalActiva) {
             float manualAncho = 950 * escalaImGui;
             ImGui::SetNextWindowPos(ImVec2(windowWidth / 2, windowHeight / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(manualAncho, 880 * escalaImGui));
             ImGui::SetNextWindowBgAlpha(0.92f);
-            ImGui::Begin("Manual de Controles", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("MANUAL DE CONTROLES                ").x) / 2);
+            ImGui::Begin("Controls Manual", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("Controls Manual               ").x) / 2);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
             ImGui::SetWindowFontScale(2.0f * escalaImGui);
-            ImGui::Text("MANUAL DE CONTROLES");
+            ImGui::Text("Controls Manual");
             ImGui::PopStyleColor();
             ImGui::SetWindowFontScale(1.1f * escalaImGui);
             ImGui::Separator();
             ImGui::Spacing();
-
-            // MOVIMIENTO
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.3f, 1.0f));
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== MOVIMIENTO ===").x) / 2);
-            ImGui::Text("=== MOVIMIENTO ===");
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== MOVEMENT ===").x) / 2);
+            ImGui::Text("=== MOVEMENT ===");
             ImGui::PopStyleColor();
             ImGui::Spacing();
-
             float centerX = manualAncho / 2;
-
             ImGui::SetCursorPosX(centerX - 45 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("W", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Caminar hacia adelante");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Move forward");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("A", ImVec2(80 * escalaImGui, 50 * escalaImGui))) {}
@@ -1493,265 +1408,234 @@ int main() {
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 100 * escalaImGui);
-            ImGui::Text("  Movimiento lateral");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("  Lateral movement");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("SHIFT", ImVec2(120 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Correr (mantener presionado)");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            ImGui::Text("Run (hold down)");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-
-            // INTERACCIÓN
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.9f, 0.5f, 1.0f));
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== INTERACCION ===").x) / 2);
-            ImGui::Text("=== INTERACCION ===");
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== INTERACTION ===").x) / 2);
+            ImGui::Text("=== INTERACTION ===");
             ImGui::PopStyleColor();
             ImGui::Spacing();
-
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("E", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Interactuar con objetos");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Interact with objects");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("F", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Encender/Apagar linterna");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Turn flashlight on/off");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("T", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Pausar/Reanudar musica");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            ImGui::Text("Pause/Resume music");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-
-            // CONTROLES DE MAPA
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.7f, 1.0f, 1.0f));
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== CONTROLES DE MAPA ===").x) / 2);
-            ImGui::Text("=== CONTROLES DE MAPA ===");
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== MAP CONTROLS ===").x) / 2);
+            ImGui::Text("=== MAP CONTROLS ===");
             ImGui::PopStyleColor();
             ImGui::Spacing();
-
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("M", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Abrir mapa (despues de obtenerlo)");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Open map (after obtaining it)");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("Z", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Cerrar mapa");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            ImGui::Text("Close map");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-
-            // CONTROLES GENERALES
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.6f, 0.2f, 1.0f));
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== CONTROLES GENERALES ===").x) / 2);
-            ImGui::Text("=== CONTROLES GENERALES ===");
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== GENERAL CONTROLS ===").x) / 2);
+            ImGui::Text("=== GENERAL CONTROLS ===");
             ImGui::PopStyleColor();
             ImGui::Spacing();
-
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("ESC", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Abrir menu de pausa");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Open pause menu");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button(" G ", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Pantalla completa / Ventana");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            ImGui::Text("Fullscreen / Windowed");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-
             ImGui::SetCursorPosX((manualAncho - 340 * escalaImGui) / 2);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.15f, 0.15f, 1.0f));
-            if (ImGui::Button("VOLVER AL MENU PRINCIPAL", ImVec2(340 * escalaImGui, 60 * escalaImGui))) {
-                manualVisto = true;
-                currentState = MENU_PRINCIPAL;
-            }
+            if (ImGui::Button("BACK TO MAIN MENU", ImVec2(340 * escalaImGui, 60 * escalaImGui))) { manualVisto = true; currentState = MENU_PRINCIPAL; }
             ImGui::PopStyleColor();
             ImGui::End();
         }
-        // ========== CRÉDITOS ==========
-        else if (currentState == CREDITS) {
+        // CREDITS
+        else if (currentState == CREDITS && !secuenciaFinalActiva) {
             ImGui::SetNextWindowPos(ImVec2(windowWidth / 2, windowHeight / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-            ImGui::SetNextWindowSize(ImVec2(450 * escalaImGui, 400 * escalaImGui));
+            ImGui::SetNextWindowSize(ImVec2(550 * escalaImGui, 620 * escalaImGui));
             ImGui::SetNextWindowBgAlpha(0.85f);
-            ImGui::Begin("Creditos", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-            ImGui::SetCursorPosX((450 * escalaImGui - ImGui::CalcTextSize("CREDITOS").x) / 2);
-            ImGui::Text("CREDITOS");
+            ImGui::Begin("Credits", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+           ImGui::SetCursorPosX((550 * escalaImGui - ImGui::CalcTextSize("CREDITS         ").x) / 2);
+           ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
+           ImGui::SetWindowFontScale(2.5f * escalaImGui);
+           ImGui::Text("CREDITS");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+           ImGui::Spacing();
+
+           ImGui::SetCursorPosX((550 * escalaImGui - ImGui::CalcTextSize("AUtt").x) / 2);
+           ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.7f, 1.0f, 1.0f));
+           ImGui::SetWindowFontScale(1.8f * escalaImGui);
+           ImGui::Text("AUTHORS");
+           ImGui::PopStyleColor();
+           ImGui::SetWindowFontScale(1.1f * escalaImGui);
+           ImGui::Spacing();
+           ImGui::Separator();
+           ImGui::Spacing();
+
+           ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.3f, 1.0f));
+           ImGui::SetWindowFontScale(1.3f * escalaImGui);
+           ImGui::Text("1st Author");
+           ImGui::PopStyleColor();
+           ImGui::SetWindowFontScale(1.0f * escalaImGui);
+           ImGui::Text("Name: Moncada Espinoza Devans Rishi");
+           ImGui::Text("Age: 19");
+           ImGui::Text("ID: 2024-1879U");
+           ImGui::Spacing();
+
+           ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.3f, 1.0f));
+           ImGui::SetWindowFontScale(1.3f * escalaImGui);
+           ImGui::Text("2nd Author");
+           ImGui::PopStyleColor();
+           ImGui::SetWindowFontScale(1.0f * escalaImGui);
+           ImGui::Text("Name: Flores Torres Mauricio Alejandro");
+           ImGui::Text("Age: 19");
+           ImGui::Text("ID: 2024-1890U");
+           ImGui::Spacing();
+
+           ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.3f, 1.0f));
+           ImGui::SetWindowFontScale(1.3f * escalaImGui);
+           ImGui::Text("3rd Author");
+           ImGui::PopStyleColor();
+           ImGui::SetWindowFontScale(1.0f * escalaImGui);
+           ImGui::Text("Name: Arnuero Macias Oscar Abraham");
+           ImGui::Text("Age: 19");
+           ImGui::Text("ID: 2024-1871U");
+           ImGui::Spacing();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.3f, 1.0f));
+            ImGui::SetWindowFontScale(1.3f * escalaImGui);
+            ImGui::Text("4th Author");
+            ImGui::PopStyleColor();
+            ImGui::SetWindowFontScale(1.0f * escalaImGui);
+            ImGui::Text("Name: Bustamante Quintanilla Jose Snayder");
+            ImGui::Text("Age: 20");
+            ImGui::Text("ID: 2024-1881U");
+            ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-            ImGui::SetCursorPosX(40 * escalaImGui);
-            ImGui::TextWrapped("BODEGA DEL TERROR");
-            ImGui::TextWrapped("Version 1.0");
-            ImGui::Spacing();
-            ImGui::TextWrapped("Desarrollado por:");
-            ImGui::TextWrapped("Tu Nombre");
-            ImGui::Spacing();
-            ImGui::TextWrapped("Gracias por jugar");
-            ImGui::Spacing();
+
+            ImGui::SetCursorPosX((550 * escalaImGui - 140 * escalaImGui) / 2);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.15f, 0.15f, 1.0f));
-            if (ImGui::Button("Volver", ImVec2(140 * escalaImGui, 50 * escalaImGui))) {
-                currentState = MENU_PRINCIPAL;
-            }
-            ImGui::PopStyleColor();
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.75f, 0.25f, 0.25f, 1.0f));
+            if (ImGui::Button("Back", ImVec2(140 * escalaImGui, 50 * escalaImGui))) currentState = MENU_PRINCIPAL;
+            ImGui::PopStyleColor(2);
             ImGui::End();
         }
-        // ========== MENÚ DE PAUSA ==========
-        else if (currentState == PAUSE_MENU) {
+        // MENÚ DE PAUSA
+        else if (currentState == PAUSE_MENU && !secuenciaFinalActiva) {
             float pauseAncho = 500 * escalaImGui;
             ImGui::SetNextWindowPos(ImVec2(windowWidth / 2, windowHeight / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(pauseAncho, 450 * escalaImGui));
             ImGui::SetNextWindowBgAlpha(0.85f);
-            ImGui::Begin("Menu de Pausa", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-
-            ImGui::SetCursorPosX((pauseAncho - ImGui::CalcTextSize("MENU DE PAUSA           ").x) / 2);
+            ImGui::Begin("Pause Menu", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::SetCursorPosX((pauseAncho - ImGui::CalcTextSize("PAUSE MENU           ").x) / 2);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
             ImGui::SetWindowFontScale(2.0f * escalaImGui);
-            ImGui::Text("MENU DE PAUSA");
+            ImGui::Text("PAUSE MENU");
             ImGui::PopStyleColor();
             ImGui::SetWindowFontScale(1.1f * escalaImGui);
             ImGui::Separator();
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Spacing(); ImGui::Spacing();
             float botonAncho = 410 * escalaImGui;
             float botonAlto = 70 * escalaImGui;
-
             ImGui::SetCursorPosX((pauseAncho - botonAncho) / 2);
-            if (ImGui::Button("REANUDAR JUEGO", ImVec2(botonAncho, botonAlto))) {
-                juegoPausado = false;
-                currentState = PLAY;
-                if (cameraStateSaved) {
-                    cameraFront = savedCameraFront;
-                    yaw = savedYaw;
-                    pitch = savedPitch;
-                    cameraStateSaved = false;
-                }
-                glfwSetCursorPos(window, SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f);
-                lastX = SCR_WIDTH / 2.0f;
-                lastY = SCR_HEIGHT / 2.0f;
-                firstMouse = true;
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                std::cout << "Juego reanudado desde menú" << std::endl;
-            }
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            if (ImGui::Button("RESUME GAME", ImVec2(botonAncho, botonAlto))) { juegoPausado = false; currentState = PLAY; if (cameraStateSaved) { cameraFront = savedCameraFront; yaw = savedYaw; pitch = savedPitch; cameraStateSaved = false; } glfwSetCursorPos(window, SCR_WIDTH / 2.0f, SCR_HEIGHT / 2.0f); lastX = SCR_WIDTH / 2.0f; lastY = SCR_HEIGHT / 2.0f; firstMouse = true; glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); }
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX((pauseAncho - botonAncho) / 2);
-            if (ImGui::Button("MANUAL", ImVec2(botonAncho, botonAlto))) {
-                currentState = MANUAL_FROM_PAUSE;
-                std::cout << "Abriendo manual desde pausa" << std::endl;
-            }
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            if (ImGui::Button("MANUAL", ImVec2(botonAncho, botonAlto))) currentState = MANUAL_FROM_PAUSE;
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX((pauseAncho - botonAncho) / 2);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.15f, 0.15f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.75f, 0.25f, 0.25f, 1.0f));
-            if (ImGui::Button("VOLVER AL MENU PRINCIPAL", ImVec2(botonAncho, botonAlto))) {
-                reiniciarJuego();
-                juegoPausado = false;
-                currentState = MENU_PRINCIPAL;
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                std::cout << "Volviendo al menú principal" << std::endl;
-            }
+            if (ImGui::Button("BACK TO MAIN MENU", ImVec2(botonAncho, botonAlto))) { reiniciarJuego(); juegoPausado = false; currentState = MENU_PRINCIPAL; glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); }
             ImGui::PopStyleColor(2);
-
             ImGui::End();
         }
-        // ========== MANUAL DESDE PAUSA ==========
-        else if (currentState == MANUAL_FROM_PAUSE) {
+        // MANUAL DESDE PAUSA
+        else if (currentState == MANUAL_FROM_PAUSE && !secuenciaFinalActiva) {
             float manualAncho = 950 * escalaImGui;
             ImGui::SetNextWindowPos(ImVec2(windowWidth / 2, windowHeight / 2), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
             ImGui::SetNextWindowSize(ImVec2(manualAncho, 880 * escalaImGui));
             ImGui::SetNextWindowBgAlpha(0.85f);
-            ImGui::Begin("Manual de Controles", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("MANUAL DE CONTROLES                ").x) / 2);
+            ImGui::Begin("Controls Manual", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("CONTROLS MANUAL                ").x) / 2);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
             ImGui::SetWindowFontScale(2.0f * escalaImGui);
-            ImGui::Text("MANUAL DE CONTROLES");
+            ImGui::Text("CONTROLS MANUAL");
             ImGui::PopStyleColor();
             ImGui::SetWindowFontScale(1.1f * escalaImGui);
             ImGui::Separator();
             ImGui::Spacing();
-
-            // MOVIMIENTO
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.3f, 1.0f));
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== MOVIMIENTO ===").x) / 2);
-            ImGui::Text("=== MOVIMIENTO ===");
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== MOVEMENT ===").x) / 2);
+            ImGui::Text("=== MOVEMENT ===");
             ImGui::PopStyleColor();
             ImGui::Spacing();
-
             float centerX = manualAncho / 2;
-
             ImGui::SetCursorPosX(centerX - 45 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("W", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Caminar hacia adelante");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Move forward");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("A", ImVec2(80 * escalaImGui, 50 * escalaImGui))) {}
@@ -1762,216 +1646,172 @@ int main() {
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 100 * escalaImGui);
-            ImGui::Text("  Movimiento lateral");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("  Lateral movement");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("SHIFT", ImVec2(120 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Correr (mantener presionado)");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            ImGui::Text("Run (hold down)");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-
-            // INTERACCIÓN
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.9f, 0.5f, 1.0f));
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== INTERACCION ===").x) / 2);
-            ImGui::Text("=== INTERACCION ===");
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== INTERACTION ===").x) / 2);
+            ImGui::Text("=== INTERACTION ===");
             ImGui::PopStyleColor();
             ImGui::Spacing();
-
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("E", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Interactuar con objetos");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Interact with objects");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("F", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Encender/Apagar linterna");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Turn flashlight on/off");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("T", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Pausar/Reanudar musica");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            ImGui::Text("Pause/Resume music");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-
-            // CONTROLES DE MAPA
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.7f, 1.0f, 1.0f));
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== CONTROLES DE MAPA ===").x) / 2);
-            ImGui::Text("=== CONTROLES DE MAPA ===");
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== MAP CONTROLS ===").x) / 2);
+            ImGui::Text("=== MAP CONTROLS ===");
             ImGui::PopStyleColor();
             ImGui::Spacing();
-
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("M", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Abrir mapa (despues de obtenerlo)");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Open map (after obtaining it)");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("Z", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Cerrar mapa");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            ImGui::Text("Close map");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-
-            // CONTROLES GENERALES
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.6f, 0.2f, 1.0f));
-            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== CONTROLES GENERALES ===").x) / 2);
-            ImGui::Text("=== CONTROLES GENERALES ===");
+            ImGui::SetCursorPosX((manualAncho - ImGui::CalcTextSize("=== GENERAL CONTROLS ===").x) / 2);
+            ImGui::Text("=== GENERAL CONTROLS ===");
             ImGui::PopStyleColor();
             ImGui::Spacing();
-
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button("ESC", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Abrir menu de pausa");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
-
+            ImGui::Text("Open pause menu");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::SetCursorPosX(centerX - 150 * escalaImGui);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
             if (ImGui::Button(" G ", ImVec2(90 * escalaImGui, 55 * escalaImGui))) {}
             ImGui::PopStyleColor();
             ImGui::SameLine();
             ImGui::SetCursorPosX(centerX + 65 * escalaImGui);
-            ImGui::Text("Pantalla completa / Ventana");
-
-            ImGui::Spacing();
-            ImGui::Spacing();
+            ImGui::Text("Fullscreen / Windowed");
+            ImGui::Spacing(); ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
-
             ImGui::SetCursorPosX((manualAncho - 340 * escalaImGui) / 2);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.15f, 0.15f, 1.0f));
-            if (ImGui::Button("VOLVER AL MENU DE PAUSA", ImVec2(340 * escalaImGui, 60 * escalaImGui))) {
-                currentState = PAUSE_MENU;
-                std::cout << "Volviendo al menú de pausa" << std::endl;
-            }
+            if (ImGui::Button("BACK TO PAUSE MENU", ImVec2(340 * escalaImGui, 60 * escalaImGui))) currentState = PAUSE_MENU;
             ImGui::PopStyleColor();
             ImGui::End();
         }
 
-        // ========== MENSAJES DE LA BODEGA ==========
-        if (currentState == PLAY && !mapaObtenido && tiempoMensajeInicial > 0.0f && !juegoPausado) {
+        // MENSAJES DE LA BODEGA
+        if (currentState == PLAY && !mapaObtenido && tiempoMensajeInicial > 0.0f && !juegoPausado && !gameOverActivo && !secuenciaFinalActiva) {
             float windowWidthMsg = 1100 * escalaImGui;
             float windowHeightMsg = 350 * escalaImGui;
             ImGui::SetNextWindowPos(ImVec2((windowWidth - windowWidthMsg) * 0.5f, (windowHeight - windowHeightMsg) * 0.3f), ImGuiCond_Always);
             ImGui::SetNextWindowSize(ImVec2(windowWidthMsg, windowHeightMsg));
             ImGui::SetNextWindowBgAlpha(0.85f);
-            ImGui::Begin("MensajeInicial", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::Begin("InitialMessage", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             ImGui::Dummy(ImVec2(0.0f, 30 * escalaImGui));
-            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("INTERACTUA CON EL MAPA            ").x) * 0.5f);
+            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("INTERACT WITH THE MAP            ").x) * 0.5f);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
             ImGui::SetWindowFontScale(2.2f * escalaImGui);
-            ImGui::Text("INTERACTUA CON EL MAPA");
-
-            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("Presiona E sobre el cuadro blanco con ").x) * 0.5f);
+            ImGui::Text("INTERACT WITH THE MAP");
+            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("Press E on the white square with ").x) * 0.5f);
             ImGui::SetWindowFontScale(1.8f * escalaImGui);
-            ImGui::Text("Presiona E sobre el cuadro blanco con el mapa");
-
+            ImGui::Text("Press E on the white square with the map");
             ImGui::Dummy(ImVec2(0.0f, 15 * escalaImGui));
-            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("Busca en la bodega princi").x) * 0.5f);
+            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("Look in the main winery").x) * 0.5f);
             ImGui::SetWindowFontScale(1.5f * escalaImGui);
-            ImGui::Text("Busca en la bodega principal");
+            ImGui::Text("Look in the main winery");
             ImGui::PopStyleColor();
             ImGui::End();
         }
 
-        if (currentState == PLAY && mapaObtenido && tiempoMensajeMapaObtenido > 0.0f && !juegoPausado) {
+        if (currentState == PLAY && mapaObtenido && tiempoMensajeMapaObtenido > 0.0f && !juegoPausado && !gameOverActivo && !secuenciaFinalActiva) {
             float windowWidthMsg = 900 * escalaImGui;
             float windowHeightMsg = 250 * escalaImGui;
             ImGui::SetNextWindowPos(ImVec2((windowWidth - windowWidthMsg) * 0.5f, (windowHeight - windowHeightMsg) * 0.3f), ImGuiCond_Always);
             ImGui::SetNextWindowSize(ImVec2(windowWidthMsg, windowHeightMsg));
             ImGui::SetNextWindowBgAlpha(0.85f);
-            ImGui::Begin("MensajeMapa", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::Begin("MapMessage", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             ImGui::Dummy(ImVec2(0.0f, 20 * escalaImGui));
-
-            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("¡HAS OBTENIDO EL MAPA!   ").x) * 0.5f);
+            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("YOU HAVE OBTAINED THE MAP!   ").x) * 0.5f);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
             ImGui::SetWindowFontScale(1.8f * escalaImGui);
-            ImGui::Text("¡HAS OBTENIDO EL MAPA!");
-
+            ImGui::Text("YOU HAVE OBTAINED THE MAP!");
             ImGui::Dummy(ImVec2(0.0f, 10 * escalaImGui));
-            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("Presiona M para abrir el ").x) * 0.5f);
+            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("Press M to open the ").x) * 0.5f);
             ImGui::SetWindowFontScale(1.5f * escalaImGui);
-            ImGui::Text("Presiona M para abrir el mapa");
-
-            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("Presiona Z para cerrar el mapa").x) * 0.5f);
+            ImGui::Text("Press M to open the map");
+            ImGui::SetCursorPosX((windowWidthMsg - ImGui::CalcTextSize("Press Z to close the map").x) * 0.5f);
             ImGui::SetWindowFontScale(1.5f * escalaImGui);
-            ImGui::Text("Presiona Z para cerrar el mapa");
-
+            ImGui::Text("Press Z to close the map");
             ImGui::PopStyleColor();
             ImGui::End();
         }
 
-        // Indicador de mapa disponible
-        if (currentState == PLAY && mapaObtenido && !juegoPausado && tiempoMensajeMapaObtenido <= 0.0f) {
+        if (currentState == PLAY && mapaObtenido && !juegoPausado && tiempoMensajeMapaObtenido <= 0.0f && !gameOverActivo && !secuenciaFinalActiva) {
             ImGui::SetNextWindowPos(ImVec2(windowWidth - 400 * escalaImGui, 20 * escalaImGui));
             ImGui::SetNextWindowSize(ImVec2(380 * escalaImGui, 120 * escalaImGui));
             ImGui::SetNextWindowBgAlpha(0.8f);
-            ImGui::Begin("InfoMapa", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::Begin("MapInfo", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             ImGui::SetWindowFontScale(1.2f * escalaImGui);
-            ImGui::Text("M para abrir mapa");
-            ImGui::Text("Z para cerrar mapa");
+            ImGui::Text("M to open map");
+            ImGui::Text("Z to close map");
             ImGui::End();
         }
 
-        // ========== RENDERIZAR MENÚ DEL MAPA ==========
-        if (currentState == PLAY && menuMapa && menuMapa->isEnabled() && menuMapa->isVisible()) {
+        if (currentState == PLAY && menuMapa && menuMapa->isEnabled() && menuMapa->isVisible() && !gameOverActivo && !secuenciaFinalActiva) {
             float windowWidthMap = 750 * escalaImGui;
             float windowHeightMap = 750 * escalaImGui;
             ImGui::SetNextWindowPos(ImVec2((windowWidth - windowWidthMap) * 0.5f, (windowHeight - windowHeightMap) * 0.35f), ImGuiCond_Always);
             ImGui::SetNextWindowSize(ImVec2(windowWidthMap, windowHeightMap));
             ImGui::SetNextWindowBgAlpha(0.9f);
-            ImGui::Begin("MenuMapa", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::Begin("MapMenu", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
             ImGui::Dummy(ImVec2(0.0f, 20 * escalaImGui));
-            ImGui::SetCursorPosX((windowWidthMap - ImGui::CalcTextSize("MAPA DE LA BODEGA      ").x) * 0.5f);
+            ImGui::SetCursorPosX((windowWidthMap - ImGui::CalcTextSize("WINERY MAP      ").x) * 0.5f);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.2f, 1.0f));
             ImGui::SetWindowFontScale(2.5f * escalaImGui);
-            ImGui::Text("MAPA DE LA BODEGA");
+            ImGui::Text("WINERY MAP");
             ImGui::PopStyleColor();
             ImGui::Dummy(ImVec2(0.0f, 20 * escalaImGui));
             if (menuMapa->getTextureID() != 0) {
@@ -1980,9 +1820,9 @@ int main() {
                 ImGui::Image((void*)(intptr_t)menuMapa->getTextureID(), ImVec2(imageSize, imageSize));
             }
             ImGui::Dummy(ImVec2(0.0f, 20 * escalaImGui));
-            ImGui::SetCursorPosX((windowWidthMap - ImGui::CalcTextSize("Presiona Z para cerrrr").x) * 0.5f);
+            ImGui::SetCursorPosX((windowWidthMap - ImGui::CalcTextSize("Press Z to close").x) * 0.5f);
             ImGui::SetWindowFontScale(1.85f * escalaImGui);
-            ImGui::Text("Presiona Z para cerrar el mapa");
+            ImGui::Text("Press Z to close the map");
             ImGui::End();
         }
 
@@ -1995,16 +1835,13 @@ int main() {
         glfwPollEvents();
     }
 
-    // ========== LIMPIEZA ==========
-    if (juego3DInicializado) {
-        delete escenario;
-        delete skybox;
-        escenario = nullptr;
-        skybox = nullptr;
-    }
+    if (juego3DInicializado) { delete escenario; delete skybox; }
     musicaFondo.stop();
     delete menuMapa;
+    delete overlayShader;
+    delete shaderSecuenciaFinal;
     glDeleteTextures(1, &texturaTituloID);
+    glDeleteTextures(1, &texturaGameOverID);
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

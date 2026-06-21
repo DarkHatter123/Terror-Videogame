@@ -59,9 +59,6 @@ set(IMGUI_SOURCES
         ${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp
         ${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp
         Menu.cpp
-        VAO.cpp
-        VBO.cpp
-        EBO.cpp
 )
 
 # ========================
@@ -78,13 +75,17 @@ add_executable(Proyecto_Terror
         Mesh.h
         Model.cpp
         Model.h
+        Boton.cpp
+        Monstruo.cpp
+        MonstruoManager.cpp
+        Nota.cpp
         Lampara.cpp
         Lampara.h
         Puerta.cpp
         Puerta.h
         Caja.cpp
         Caja.h
-
+        Menu2D.cpp
         TexturaUtils.cpp
 
         src/SOIL2/SOIL2.c
