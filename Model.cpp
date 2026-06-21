@@ -1,11 +1,17 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 #include "Model.h"
 #include "src/SOIL2/SOIL2.h"
 #include <iostream>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+<<<<<<< HEAD
 #include <glm/gtc/type_ptr.hpp>
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
 Model::Model(const char* path) {
     position = glm::vec3(0.0f);
@@ -29,6 +35,7 @@ void Model::Draw(Shader &shader) {
 
     shader.setMat4("model", model);
     shader.setBool("usarTextura", true);
+<<<<<<< HEAD
 
     if (!animations.empty() && !boneTransforms.empty()) {
         shader.setMat4Array("boneMatrices", boneCount, boneTransforms.data());
@@ -36,6 +43,8 @@ void Model::Draw(Shader &shader) {
     } else {
         shader.setInt("numBones", 0);
     }
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
     for(unsigned int i = 0; i < meshes.size(); i++)
         meshes[i].Draw(shader.ID);
@@ -100,9 +109,13 @@ void Model::loadModel(std::string path) {
     }
 
     processNode(scene->mRootNode, scene);
+<<<<<<< HEAD
     rootNode = buildNodeTree(scene->mRootNode);
     loadAnimations(scene);
     std::cout << "Modelo cargado: " << path << " (" << meshes.size() << " meshes, " << boneCount << " bones, " << animations.size() << " animations)" << std::endl;
+=======
+    std::cout << "Modelo cargado: " << path << " (" << meshes.size() << " meshes)" << std::endl;
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 }
 
 void Model::processNode(aiNode *node, const aiScene *scene) {
@@ -149,6 +162,7 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene) {
         vertices.push_back(vertex);
     }
 
+<<<<<<< HEAD
     std::vector<int> boneIds(vertices.size(), -1);
     std::vector<float> boneWeights(vertices.size(), 0.0f);
     extractBoneData(mesh, boneIds, boneWeights);
@@ -160,6 +174,8 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene) {
         }
     }
 
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];
         for(unsigned int j = 0; j < face.mNumIndices; j++)
@@ -445,6 +461,10 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial *mat, aiTextureType 
     return textures;
 }
 
+<<<<<<< HEAD
+=======
+// Constructor de copia
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 Model::Model(const Model& other) {
     position = other.position;
     rotation = other.rotation;
@@ -452,6 +472,7 @@ Model::Model(const Model& other) {
     directory = other.directory;
     textures_loaded = other.textures_loaded;
     meshes = other.meshes;
+<<<<<<< HEAD
     boneInfo = other.boneInfo;
     boneMap = other.boneMap;
     boneCount = other.boneCount;
@@ -465,6 +486,12 @@ Model::Model(const Model& other) {
     std::cout << "Modelo copiado correctamente" << std::endl;
 }
 
+=======
+    std::cout << "Modelo copiado correctamente" << std::endl;
+}
+
+// Operador de asignación
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 Model& Model::operator=(const Model& other) {
     if (this != &other) {
         position = other.position;
@@ -473,6 +500,7 @@ Model& Model::operator=(const Model& other) {
         directory = other.directory;
         textures_loaded = other.textures_loaded;
         meshes = other.meshes;
+<<<<<<< HEAD
         boneInfo = other.boneInfo;
         boneMap = other.boneMap;
         boneCount = other.boneCount;
@@ -483,10 +511,16 @@ Model& Model::operator=(const Model& other) {
         boneTransforms = other.boneTransforms;
         globalInverseTransform = other.globalInverseTransform;
         rootNode = other.rootNode;
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     }
     return *this;
 }
 
+<<<<<<< HEAD
+=======
+// Destructor
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 Model::~Model() {
     std::cout << "Modelo destruido" << std::endl;
 }
@@ -531,4 +565,8 @@ unsigned int Model::TextureFromFile(const char *path, const std::string &directo
     }
 
     return textureID;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3

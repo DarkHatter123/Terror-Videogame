@@ -109,7 +109,10 @@ private:
     unsigned int texturaBodega;
     unsigned int texturaMarcoBodega;
     unsigned int texturaNota;
+<<<<<<< HEAD
     unsigned int texturaCartel;
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
     // Linterna
     struct {
@@ -120,7 +123,10 @@ private:
 
     // Modelo palanca
     Model* modeloPalancaPtr;
+<<<<<<< HEAD
     Model* modeloPalanca2Ptr;
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     std::vector<bool> modelosTieneColision;
 
     // ==================== MONSTRUO ====================
@@ -152,7 +158,10 @@ private:
     void configurarLuces(Shader& shader, float tiempo);
     void configurarLinterna(Shader& shader);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     // Notas
     void agregarNota(const glm::vec3& pos, const glm::vec3& esc, const std::string& texto, float radioInteraccion = 2.0f);
     void renderNotas(Shader& shader);
@@ -170,8 +179,11 @@ public:
     Escenario();
     ~Escenario();
 
+<<<<<<< HEAD
     void reset();
 
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     void render(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& cameraPos, float tiempo);
     void renderPuertasMadera(const glm::mat4& view, const glm::mat4& projection, Shader* shader);
     void update(float deltaTime);
@@ -181,7 +193,11 @@ public:
     bool jugadorCercaDePuerta(glm::vec3 posJugador) const;
     void togglePuerta();
     bool isPuertaAbierta() const;
+<<<<<<< HEAD
     bool togglePuertaMadera(glm::vec3 jugadorPos); // returns true if any door was toggled
+=======
+    void togglePuertaMadera(glm::vec3 jugadorPos);
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     bool jugadorCercaPuerta(glm::vec3 posicionJugador);
     bool jugadorCercaPalanca(glm::vec3 posJugador) const;
     void togglePalanca();
@@ -194,7 +210,10 @@ public:
     // Botones
     bool jugadorCercaBoton(const glm::vec3& posJugador, int& indice);
     void presionarBoton(int indice);
+<<<<<<< HEAD
     glm::vec3 getBotonPosicion(int indice) const;
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
     // Metodos del moustro
     void inicializarMonstruo();
@@ -209,10 +228,13 @@ public:
     const Monstruo& getMonstruo() const;
     float getTiempoCongelado() const;
 
+<<<<<<< HEAD
 
     glm::vec3 getPosicionMonstruo() const {
         return monstruoManager ? monstruoManager->getPosicionMonstruo() : glm::vec3(0.0f);
     }
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 };
 
 unsigned int cargarTextura(const char* path);

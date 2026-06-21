@@ -14,7 +14,11 @@ set(ASSIMP_BUILD "C:/assimp-master/build")
 set(SFML_PATH "C:/SFML")
 
 # Dear ImGui
+<<<<<<< HEAD
 set(IMGUI_ROOT "C:/imgui-master/imgui-master")
+=======
+set(IMGUI_ROOT "C:/imgui-master")
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
 # ========================
 # DEFINICIONES
@@ -29,6 +33,10 @@ include_directories(
         ${GLM_PATH}
         ${GLAD_PATH}/include
         ${ASSIMP_ROOT}/include
+<<<<<<< HEAD
+=======
+        ${ASSIMP_BUILD}/include
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src/SOIL2
         ${SFML_PATH}
@@ -59,6 +67,16 @@ set(IMGUI_SOURCES
         ${IMGUI_ROOT}/backends/imgui_impl_glfw.cpp
         ${IMGUI_ROOT}/backends/imgui_impl_opengl3.cpp
         Menu.cpp
+<<<<<<< HEAD
+=======
+        Menu2D.cpp
+        Nota.cpp
+        Boton.cpp
+        Monstruo.cpp
+        Monstruo.h
+        MonstruoManager.cpp
+        MonstruoManager.h
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 )
 
 # ========================
@@ -85,7 +103,11 @@ add_executable(Proyecto_Terror
         Puerta.h
         Caja.cpp
         Caja.h
+<<<<<<< HEAD
         Menu2D.cpp
+=======
+
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
         TexturaUtils.cpp
 
         src/SOIL2/SOIL2.c
@@ -95,6 +117,10 @@ add_executable(Proyecto_Terror
         src/SOIL2/image_array.c
 
         ${IMGUI_SOURCES}
+<<<<<<< HEAD
+=======
+        Menu2D.cpp
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 )
 
 # ========================
@@ -112,9 +138,21 @@ target_link_libraries(Proyecto_Terror
         opengl32
         gdi32
         user32
+<<<<<<< HEAD
         "C:/libraries/include/assimp-master/build/lib/libassimp.dll.a"
         "C:/Libraries/lib/Libs/libsfml-graphics.a"
         "C:/Libraries/lib/Libs/libsfml-window.a"
         "C:/Libraries/lib/Libs/libsfml-system.a"
         "C:/Libraries/lib/Libs/libsfml-audio.a"
+=======
+
+        glfw3
+
+        ${ASSIMP_BUILD}/lib/libassimpd.dll.a
+
+        sfml-graphics
+        sfml-window
+        sfml-system
+        sfml-audio
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 )

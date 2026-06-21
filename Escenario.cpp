@@ -55,10 +55,13 @@ Escenario::Escenario() {
     puertaSalidaBloqueada = true;
     botonSalidaPresionado = false;
 
+<<<<<<< HEAD
     // ===== REINICIAR PUNTEROS DE PALANCA =====
     modeloPalancaPtr = nullptr;
     modeloPalanca2Ptr = nullptr;
 
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     // Inicializar monstruo
     monstruoManager = new MonstruoManager();
     monstruoManager->setPosicionAparicion(glm::vec3(9.5f, -2.5f, 28.0f));
@@ -68,7 +71,11 @@ Escenario::Escenario() {
     Puerta puertaSalida(glm::vec3(-7.5f, -2.5f, 29.8f));
     puertaSalida.setTamanio(2.2f, 5.0f, 0.1f);
     puertasMadera.push_back(puertaSalida);
+<<<<<<< HEAD
     texturaPuertaIndustrial = cargarTextura("Textures/Puerta(2).png");
+=======
+    texturaPuertaIndustrial = cargarTextura("Textures/PuertaMadera.png");
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     texturaPared = cargarTextura("Textures/Pared4.png");
     texturaPared2 = cargarTextura("textures/Pared2.png");
     texturaPared3 = cargarTextura(("textures/ParedOficina.png"));
@@ -85,7 +92,10 @@ Escenario::Escenario() {
     texturaMarcoBodega = cargarTextura("textures/Marco_bodega.png");
     texturaNota = cargarTextura("Textures/Nota.jpg");
     if (texturaNota == 0) std::cout << "Advertencia: No se pudo cargar Textures/Nota.jpg" << std::endl;
+<<<<<<< HEAD
     texturaCartel = cargarTextura("Textures/Cartel.png");
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
     puertaSalida.setTextura("Textures/PuertaMadera.png");
     puertaSalida.setTexturaPicaporte("Textures/Picaporte.png");
@@ -100,7 +110,10 @@ Escenario::Escenario() {
     palancaActivada = false;
     palancaAnimando = false;
     modeloPalancaPtr = nullptr;
+<<<<<<< HEAD
     modeloPalanca2Ptr = nullptr;
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
     Bodega();
     Cajas();
@@ -121,6 +134,7 @@ Escenario::Escenario() {
 
     // Notas
     agregarNota(glm::vec3(6.0f, -1.0f, 14.8f), glm::vec3(0.8f, 0.6f, 0.05f),
+<<<<<<< HEAD
        "The main exit is blocked.\n"
        "You must activate the lever in the security room.\n\n"
        "Search the office area.");
@@ -132,6 +146,18 @@ Escenario::Escenario() {
         "For new employees, remember that you must first activate the power in the box area,\n"
         "then the power in the offices to make them operational,\n"
         "finally secure the power in the reception and adjacent offices.");
+=======
+       "La salida principal está bloqueada.\n"
+       "Debes activar la palanca en la sala de seguridad.\n\n"
+       "Busca en la zona de oficinas.");
+    agregarNota(glm::vec3(-7.5f, -2.80f, 64.5f), glm::vec3(1.0f, 0.05f, 0.7f),
+    "El cargamento que vino tenía un hedor extraño \nno parece ser nada grave\n\n"
+    "-Reporte de Empleado",
+    3.0f);
+    agregarNota(glm::vec3(21.0f, -2.40f, 60.0f), glm::vec3(0.8f, 0.05f, 0.6f),
+        "Horario de limpieza:\nSe recomienda no entrar después de las 22:00 hrs.\n\n"
+        "(Mancha de café)");
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
     // buttons
     agregarBoton(glm::vec3(-10.0f, -2.5f, 30.1f), glm::vec3(0.4f, 0.4f, 0.1f), glm::vec3(1.0f, 0.2f, 0.2f), 1);
@@ -346,6 +372,7 @@ void Escenario::inicializarMonstruo() {
     if (monstruoManager) {
         monstruoManager->inicializar();
         monstruoActivado = false;
+<<<<<<< HEAD
     }
 }
 
@@ -439,6 +466,95 @@ bool Escenario::togglePuertaMadera(glm::vec3 jugadorPos) {
     return algunaToggled;
 }
 
+=======
+    }
+}
+
+void Escenario::activarMonstruo(const glm::vec3& posicionInicial) {
+    if (monstruoManager) {
+        monstruoManager->activarMonstruoEn(posicionInicial);
+        monstruoActivado = true;
+        std::cout << "Monstruo activado en Escenario" << std::endl;
+    }
+}
+
+void Escenario::actualizarMonstruo(float deltaTime, const glm::vec3& posJugador) {
+    if (monstruoManager) {
+        monstruoManager->actualizar(deltaTime, posJugador, 0.4f);
+    }
+}
+
+void Escenario::renderMonstruo(Shader& shader) {
+    if (monstruoManager && monstruoManager->isMonstruoActivo()) {
+        monstruoManager->render(shader);
+    }
+}
+
+bool Escenario::isJugadorAtrapado() const {
+    return monstruoManager && monstruoManager->isJugadorAtrapado();
+}
+
+bool Escenario::isMonstruoActivo() const {
+    return monstruoManager && monstruoManager->isMonstruoActivo();
+}
+
+void Escenario::liberarJugador() {
+    if (monstruoManager) {
+        monstruoManager->liberarJugador();
+    }
+}
+
+void Escenario::setMonstruoActivadoPorPuzzle(bool activado) {
+    if (monstruoManager) {
+        monstruoManager->setMonstruoActivadoPorPuzzle(activado);
+    }
+}
+
+bool Escenario::isMonstruoActivadoPorPuzzle() const {
+    return monstruoManager && monstruoManager->isMonstruoActivadoPorPuzzle();
+}
+
+void Escenario::setMonstruoAtraviesaPuertas(bool puede) {
+    if (monstruoManager) {
+        monstruoManager->setPuedeAtravesarPuertas(puede);
+    }
+}
+
+
+void Escenario::togglePuertaMadera(glm::vec3 jugadorPos) {
+    // Si el monstruo esta activo, permitir que atraviese puertas
+    if (monstruoManager && monstruoManager->isMonstruoActivo()) {
+        // El monstruo puede atravesar puertas, asi que abrimos sin restricciones
+        for (auto& puerta : puertasMadera) {
+            if (puerta.jugadorCerca(jugadorPos)) {
+                puerta.toggle();
+            }
+        }
+        return;
+    }
+
+    for (auto& puerta : puertasMadera) {
+        if (puerta.jugadorCerca(jugadorPos)) {
+            glm::vec3 posPuerta = puerta.getPosicion();
+
+            // Detectar puerta del jefe (coordenada Z ≈ 53.9)
+            bool esPuertaJefe = (posPuerta.x > -7.6f && posPuerta.x < -7.4f &&
+                                  posPuerta.z > 53.8f && posPuerta.z < 54.0f);
+
+            // Detectar puerta de salida (coordenada Z ≈ 74.0, X ≈ 18.5)
+            bool esPuertaSalida = (posPuerta.x > 18.4f && posPuerta.x < 18.6f &&
+                                    posPuerta.z > 73.9f && posPuerta.z < 74.1f);
+
+            if ((esPuertaJefe && puertaJefeBloqueada) || (esPuertaSalida && puertaSalidaBloqueada)) {
+                std::cout << "La puerta está bloqueada. Necesitas activar la palanca." << std::endl;
+                continue;
+            }
+            puerta.toggle();
+        }
+    }
+}
+
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 void Escenario::Luces() {
     float posicionesLuz[][3] = {
         {-4.0f, 4.0f, -10.0f},
@@ -1064,6 +1180,7 @@ void Escenario::togglePalanca() {
     std::cout << "Palanca " << (palancaActivada ? "activada" : "desactivada") << std::endl;
 
     if (palancaActivada) {
+<<<<<<< HEAD
         if (modeloPalanca2Ptr) {
             for (size_t i = 0; i < modelosExtra.size(); i++) {
                 if (modelosExtra[i] == modeloPalancaPtr) {
@@ -1092,6 +1209,8 @@ void Escenario::togglePalanca() {
             }
         }
 
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
         abrirPuertaJefe();
         std::cout << "¡La energía ha desbloqueado la oficina del jefe!" << std::endl;
     }
@@ -1268,7 +1387,11 @@ void Escenario::render(const glm::mat4& view, const glm::mat4& projection, const
         }
     }
 
+<<<<<<< HEAD
     //Monstruo render
+=======
+    //Moustro render
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     if (monstruoManager && monstruoManager->isMonstruoActivo()) {
         shaderMonstruo->use();
         shaderMonstruo->setMat4("view", view);
@@ -2506,6 +2629,7 @@ void Escenario::PasillosAreaSeguridad() {
     puertasMadera.push_back(Puerta(glm::vec3(36.0f, sueloY + 1.5f, 35.5f), 2.2f, 7.0f, 0.1f, 0.0f));
     puertasMadera.back().setTextura("Textures/PuertaMadera.png");
     puertasMadera.back().setTexturaPicaporte("Textures/Picaporte.png");
+<<<<<<< HEAD
     puertasMadera.back().setBloqueada(true);
 
     // ===== MODELOS DE PALANCA =====
@@ -2529,6 +2653,19 @@ void Escenario::PasillosAreaSeguridad() {
     }
 
     modelosExtra.push_back(modeloPalancaGlobal);
+=======
+
+    static Model* modeloPalanca = nullptr;
+    if (!modeloPalanca) {
+        modeloPalanca = new Model("models/crowbar/lever.obj");
+        modeloPalanca->position = glm::vec3(37.5f, sueloY + 3.0f, 37.0f);
+        modeloPalanca->rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+        modeloPalanca->scale = glm::vec3(1.0f, 1.0f, 1.0f);
+        std::cout << "Palanca agregada en el pasillo frontal" << std::endl;
+        modeloPalancaPtr = modeloPalanca;
+    }
+    modelosExtra.push_back(modeloPalanca);
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
     modelosPosiciones.push_back(glm::vec3(0.0f, 0.0f, 0.0f));
     modelosEscalas.push_back(glm::vec3(1.0f, 1.0f, 1.0f));
 
@@ -3031,7 +3168,11 @@ void Escenario::PasilloRecepcion() {
     }
 
     // 5. CARTEL SALIDA CON LUZ PARPADEANTE
+<<<<<<< HEAD
     crearBloque(glm::vec3(xCentro, sueloY + pCristalAlto + 0.5f, zFin - 0.06f), glm::vec3(1.0f, 0.4f, 0.05f), glm::vec3(1.0f), false, true, texturaCartel);
+=======
+    crearBloque(glm::vec3(xCentro, sueloY + pCristalAlto + 0.5f, zFin - 0.06f), glm::vec3(1.0f, 0.4f, 0.05f), glm::vec3(0.0f, 0.9f, 0.2f), false, false, 0);
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
     LuzPuntual luzExit;
     luzExit.posicion = glm::vec3(xCentro, sueloY + pCristalAlto + 0.5f, zFin - 0.12f);
@@ -3046,6 +3187,7 @@ void Escenario::PasilloRecepcion() {
     luzExit.visible = false;
     luzExit.diffuseStrength = 1.0f;
     luces.push_back(luzExit);
+<<<<<<< HEAD
 
     // 6. MODELOS - MÁQUINA EXPENDEDORA Y MACETA (segunda puerta)
     float zSegundaPuerta = primeraPuertaZ + separacionPuertas;
@@ -3082,6 +3224,8 @@ void Escenario::PasilloRecepcion() {
     hitboxMaceta.tieneTextura = false;
     hitboxMaceta.visible = false;
     objetos.push_back(hitboxMaceta);
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 }
 
 void Escenario::crearIndicadoresProgreso() {
@@ -3247,11 +3391,14 @@ void Escenario::presionarBoton(int indice) {
     }
 }
 
+<<<<<<< HEAD
 glm::vec3 Escenario::getBotonPosicion(int indice) const {
     if (indice < 0 || indice >= (int)botones.size()) return glm::vec3(0.0f);
     return botones[indice].getPosicion();
 }
 
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 void Escenario::renderBotones(Shader& shader) {
     if (botones.empty()) return;
     shader.use();
@@ -3278,6 +3425,7 @@ void Escenario::abrirPuertaSalida() {
     puertaSalidaBloqueada = false;
     std::cout << "¡La puerta de salida se ha abierto!" << std::endl;
 }
+<<<<<<< HEAD
 
 void Escenario::reset() {
     std::cout << "=== RESETEANDO ESCENARIO ===" << std::endl;
@@ -3333,3 +3481,5 @@ void Escenario::reset() {
 
     std::cout << "=== ESCENARIO RESETEADO COMPLETAMENTE ===" << std::endl;
 }
+=======
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3

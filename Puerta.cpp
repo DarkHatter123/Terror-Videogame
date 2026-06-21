@@ -66,6 +66,7 @@ void Puerta::setTamanio(float nuevoAncho, float nuevoAlto, float nuevoGrosor)
 }
 
 void Puerta::setTextura(const char* rutaTextura)
+<<<<<<< HEAD
 {
     texturaID = SOIL_load_OGL_texture(
         rutaTextura,
@@ -117,6 +118,59 @@ bool Puerta::toggle()
 {
     if (bloqueada)
         return false;
+=======
+{
+    texturaID = SOIL_load_OGL_texture(
+        rutaTextura,
+        SOIL_LOAD_RGB,
+        SOIL_CREATE_NEW_ID,
+        SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y
+    );
+
+    if (texturaID == 0) {
+        std::cout << "Error al cargar textura de puerta: " << rutaTextura << std::endl;
+        std::cout << "Razón: " << SOIL_last_result() << std::endl;
+        tieneTextura = false;
+    } else {
+        glBindTexture(GL_TEXTURE_2D, texturaID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        tieneTextura = true;
+        std::cout << "Textura de puerta cargada: " << rutaTextura << std::endl;
+    }
+}
+
+void Puerta::setTexturaPicaporte(const char* rutaTextura)
+{
+    texturaPicaporteID = SOIL_load_OGL_texture(
+        rutaTextura,
+        SOIL_LOAD_RGB,
+        SOIL_CREATE_NEW_ID,
+        SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y
+    );
+
+    if (texturaPicaporteID == 0) {
+        std::cout << "Error al cargar textura de picaporte: " << rutaTextura << std::endl;
+        std::cout << "Razón: " << SOIL_last_result() << std::endl;
+        tieneTexturaPicaporte = false;
+    } else {
+        glBindTexture(GL_TEXTURE_2D, texturaPicaporteID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        tieneTexturaPicaporte = true;
+        std::cout << "Textura de picaporte cargada: " << rutaTextura << std::endl;
+    }
+}
+
+void Puerta::toggle()
+{
+    if (bloqueada)
+        return;
+>>>>>>> 5ef2c6448ea51885101b988eaf507094d924b7a3
 
     abierta = !abierta;
     return true;
