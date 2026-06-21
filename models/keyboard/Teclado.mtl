@@ -1,0 +1,32 @@
+# Blender 4.5.10 LTS MTL File: 'modelos.blend'
+# www.blender.org
+
+newmtl Mouse
+Ns 259.344940
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Mouse.png
+
+newmtl Teclado_ColorBase
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Teclado_ColorBase.png
+
+newmtl Teclado_teclas
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd Teclado_teclas.png
