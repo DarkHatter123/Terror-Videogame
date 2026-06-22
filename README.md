@@ -124,6 +124,6 @@ Well, i am going to explain you the process to download this videogmae, read qui
 
 ## Link of the .exe
 
-> https://github.com/DarkHatter123/Terror-Videogame/releases/download/V.01/Unstable.Anomaly.rar
+ https://github.com/DarkHatter123/Terror-Videogame/releases/download/V.01/Unstable.Anomaly.rar
 
 ## Link of the video
