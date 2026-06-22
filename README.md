@@ -92,13 +92,24 @@ Well, i am going to explain you the process to download this videogmae, read qui
 
 >1) First, press the green button with the text "<> Code v".
 
+<img width="1600" height="899" alt="WhatsApp Image 2026-06-21 at 6 04 24 PM" src="https://github.com/user-attachments/assets/a573c2b6-2036-4b5e-904b-c72a682c7b1d" />
+
 >2) Second, go to "Local" and press "Download Zip"
+
+<img width="1600" height="899" alt="WhatsApp Image 2026-06-21 at 6 07 18 PM" src="https://github.com/user-attachments/assets/18688e39-edf8-4804-af27-258eab259c24" />
 
 >3) Later, put the zip wherever you want in your dispositive(Desk PC, or Laptop)
 
+<img width="1600" height="899" alt="WhatsApp Image 2026-06-21 at 6 12 32 PM" src="https://github.com/user-attachments/assets/abbe7d91-03c8-46d3-b6e9-00c91ad7d434" />
+
 >4) Then, decompress the full zip, ignore the advise of a masked virus from Windows".
 
+<img width="1600" height="899" alt="WhatsApp Image 2026-06-21 at 6 14 43 PM" src="https://github.com/user-attachments/assets/e92cc847-61b5-44d9-bca4-59c27404e1f0" />
+
 >5) Finally, enter to the carpet and execute "Proyecto_Terror.exe".
+
+<img width="1599" height="898" alt="WhatsApp Image 2026-06-21 at 6 15 25 PM" src="https://github.com/user-attachments/assets/6eb92dd2-dbab-4be7-b48f-2fe909c846c8" />
+<img width="1600" height="899" alt="WhatsApp Image 2026-06-21 at 6 15 42 PM" src="https://github.com/user-attachments/assets/ebe96c72-14e7-4a78-9483-2423128e476f" />
 
 ## Images
 <img width="975" height="571" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (10)" src="https://github.com/user-attachments/assets/5c22e534-d224-4668-98c1-e49f4691c13b" />
