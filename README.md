@@ -42,7 +42,9 @@
 
 >Graphic Card: Integrated(NVIDIA, AMD, Intel)
 
->Weight: -----
+>Size: 292 MB
+
+>Size on disk: 293 MB
 
 ## How clone this repository?
 
