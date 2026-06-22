@@ -141,5 +141,4 @@ Well, i am going to explain you the process to download this videogmae, read qui
 
 ## Link of the video
 
-
-[![Click to watch the gameplay video](WhatsApp Image 2026-06-21 at 4.20.45 PM.jpeg)](https://www.youtube.com/watch?v=oJ8iu6gQBfY)
+ https://www.youtube.com/watch?v=oJ8iu6gQBfY
