@@ -141,4 +141,4 @@ Well, i am going to explain you the process to download this videogmae, read qui
 
 ## Link of the video
 
-[Imagen](https://raw.githubusercontent.com/DarkHatter123/Terror-Videogame/Images/WhatsApp Image 2026-06-21 at 4.20.45 PM.jpeg)](https://github.com/DarkHatter123/Terror-Videogame)
+[Imagen](https://github.com/DarkHatter123/Terror-Videogame/blob/main/Images/WhatsApp%20Image%202026-06-21%20at%204.20.45%20PM.jpeg)](https://github.com/DarkHatter123/Terror-Videogame)
