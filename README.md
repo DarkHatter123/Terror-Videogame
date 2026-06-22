@@ -122,4 +122,8 @@ Well, i am going to explain you the process to download this videogmae, read qui
 <img width="975" height="567" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (12)" src="https://github.com/user-attachments/assets/4e1db8e1-0ffa-447d-ac83-4c51d0f85cbc" />
 <img width="975" height="563" alt="WhatsApp Image 2026-06-21 at 4 20 45 PM (11)" src="https://github.com/user-attachments/assets/ea05fe94-cb8b-47d5-803f-90eda14e6119" />
 
+## Link of the .exe
+
+> https://github.com/DarkHatter123/Terror-Videogame/releases/download/V.01/Unstable.Anomaly.rar
+
 ## Link of the video
