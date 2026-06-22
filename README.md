@@ -141,4 +141,4 @@ Well, i am going to explain you the process to download this videogmae, read qui
 
 ## Link of the video
 
-[![Complete Video of Unstable Anomaly]([URL_DE_LA_IMAGEN](https://github.com/DarkHatter123/Terror-Videogame/blob/main/Images/WhatsApp%20Image%202026-06-21%20at%204.20.45%20PM.jpeg?raw=true))]([URL_DEL_SITIO_WEB](https://www.youtube.com/watch?v=EMEN46bsfGw&t=464s))
+[![]([URL_DE_LA_IMAGEN](https://github.com/DarkHatter123/Terror-Videogame/blob/main/Images/WhatsApp%20Image%202026-06-21%20at%204.20.45%20PM.jpeg?raw=true))]([URL_DEL_SITIO_WEB](https://www.youtube.com/watch?v=EMEN46bsfGw&t=464s))
